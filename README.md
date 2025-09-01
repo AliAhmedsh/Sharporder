@@ -1,4 +1,73 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Sharporder - React Native App
+
+A delivery service app built with React Native and React Navigation.
+
+## Project Structure
+
+```
+src/
+├── components/          # Reusable UI components
+├── context/            # React Context for state management
+│   └── AppContext.js   # Main app context with all state
+├── navigation/         # Navigation configuration
+│   └── AppNavigator.js # Stack navigator setup
+└── screens/            # Individual screen components
+    ├── SplashScreen.js
+    ├── OnboardingScreen.js
+    ├── LoginScreen.js
+    ├── SignUpScreen.js
+    ├── DashboardScreen.js
+    ├── DeliveryDetailsScreen.js
+    ├── TripDetailsScreen.js
+    ├── DriverSearchScreen.js
+    ├── DriverFoundScreen.js
+    └── DeliveryCompleteScreen.js
+```
+
+## Features
+
+- **Splash Screen**: App loading screen with auto-navigation to onboarding
+- **Onboarding**: Multi-step introduction to the app
+- **Authentication**: Login and signup screens with OTP verification
+- **Dashboard**: Main booking interface with map view
+- **Delivery Flow**: Complete delivery booking process
+- **Driver Management**: Driver search, selection, and tracking
+- **Real-time Updates**: Delivery alerts and status updates
+
+## Navigation Flow
+
+1. **Splash** → **Onboarding** (auto-navigation after 2 seconds)
+2. **Onboarding** → **Login** or **SignUp**
+3. **Login** → **Dashboard** (on successful login)
+4. **SignUp** → **Dashboard** (after OTP verification)
+5. **Dashboard** → **DeliveryDetails** (when search is focused)
+6. **DeliveryDetails** → **TripDetails** (on continue)
+7. **TripDetails** → **DriverSearch** (on search for driver)
+8. **DriverSearch** → **DriverFound** (after driver selection and payment)
+9. **DriverFound** → **DeliveryComplete** (after delivery completion)
+
+## State Management
+
+The app uses React Context for state management with the following main states:
+
+- `formData`: User input data across all screens
+- `currentOnboardingStep`: Current step in onboarding flow
+- `showOTPModal`: OTP verification modal visibility
+- `showTruckSelector`: Truck selection modal visibility
+- `showDriverSelection`: Driver selection modal visibility
+- `showPaymentModal`: Payment modal visibility
+- `showDeliveryAlert`: Delivery alert modal visibility
+- `showSuccessModal`: Success modal visibility
+- `alertResolved`: Alert resolution status
+
+## Dependencies
+
+- `@react-navigation/native`: Core navigation library
+- `@react-navigation/stack`: Stack navigator
+- `react-native-screens`: Native screen components
+- `react-native-safe-area-context`: Safe area handling
+
+This is a [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
 
