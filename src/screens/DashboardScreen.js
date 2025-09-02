@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,53 @@ import {
   SafeAreaView,
   StatusBar,
   Keyboard,
+  Button,
+  ScrollView,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import ActionSheet from 'react-native-actions-sheet';
 import MapView from 'react-native-maps';
+import DeliveryDetailsScreen from './DeliveryDetailsScreen';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+
+const BookingSearch = ({ query, setQuery, searchLocation }) => {
+  return (
+    <View>
+      <Text style={styles.bookingTitle}>Book your delivery</Text>
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Where are we going?"
+          value={query}
+          onChangeText={setQuery}
+          onSubmitEditing={searchLocation}
+          returnKeyType="search"
+        />
+      </View>
+    </View>
+  );
+};
+
+const { height } = Dimensions.get('window');
 
 const DashboardScreen = () => {
+  const actionSheetRef = useRef(null);
+
+  useEffect(() => {
+    actionSheetRef?.current?.show();
+  }, []);
+
   const [region, setRegion] = useState({
     latitude: 6.5244,
     longitude: 3.3792,
     latitudeDelta: 0.05,
     longitudeDelta: 0.05,
   });
+
+  const [step, setStep] = useState(0);
 
   const [marker, setMarker] = useState({
     latitude: 6.5244,
@@ -34,8 +71,17 @@ const DashboardScreen = () => {
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
           query,
         )}&format=json&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'Sharporder/1.0 umerjaved3333@gmail.com', // required by Nominatim
+            Accept: 'application/json',
+          },
+        },
       );
-      const results = await response.json();
+
+      const text = await response.text();
+      console.log('Raw response:', text);
+      const results = JSON.parse(text); // parse manually
 
       if (results.length > 0) {
         const { lat, lon, display_name } = results[0];
@@ -48,11 +94,11 @@ const DashboardScreen = () => {
 
         setRegion(newRegion);
         setMarker({ latitude: parseFloat(lat), longitude: parseFloat(lon) });
-
-        // Animate map to searched location
         mapRef.current?.animateToRegion(newRegion, 1000);
-
         Keyboard.dismiss();
+        setTimeout(() => {
+          setStep(1);
+        }, 3000);
       } else {
         alert('No results found');
       }
@@ -85,14 +131,6 @@ const DashboardScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
       <View style={styles.mapContainer}>
-        {/* <MapView
-          provider={PROVIDER_GOOGLE}
-          ref={mapRef}
-          style={styles.map}
-          initialRegion={region}
-          region={region}
-        ></MapView> */}
-
         <MapView
           ref={mapRef}
           style={{ width: '100%', flex: 1 }}
@@ -102,19 +140,40 @@ const DashboardScreen = () => {
           showsMyLocationButton={true}
         ></MapView>
 
-        <View style={styles.bookingCard}>
-          <Text style={styles.bookingTitle}>Book your delivery</Text>
-          <View style={styles.searchContainer}>
-            <Text style={styles.searchIcon}>🔍</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Where are we going?"
-              value={query}
-              onChangeText={setQuery}
-              onSubmitEditing={searchLocation}
-              returnKeyType="search"
-            />
-          </View>
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <ActionSheet
+            ref={actionSheetRef}
+            gestureEnabled={false}
+            closeOnTouchBackdrop={false}
+            containerStyle={{
+              backgroundColor: 'white',
+              maxHeight: height * 0.8,
+            }}
+            overlayColor="red"
+            defaultOverlayOpacity={0}
+            bounceOnOpen={true}
+            indicatorStyle={{ backgroundColor: '#ccc' }}
+            closable={false}
+            openAnimationConfig={{ spring: { speed: 14, bounciness: 4 } }}
+            keyboardHandlerEnabled={true}
+            keyboardAvoidingBehavior="padding" // or "height"
+          >
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, padding: 16 }}
+              style={styles.bookingCard}
+              keyboardShouldPersistTaps="handled"
+            >
+              {step === 0 ? (
+                <BookingSearch
+                  query={query}
+                  setQuery={setQuery}
+                  searchLocation={searchLocation}
+                />
+              ) : step === 1 ? (
+                <DeliveryDetailsScreen />
+              ) : null}
+            </ScrollView>
+          </ActionSheet>
         </View>
       </View>
     </SafeAreaView>
@@ -125,21 +184,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
   mapContainer: { flex: 1 },
   map: { flex: 1 },
-  bookingCard: {
-    backgroundColor: '#ffffff',
-    padding: 20,
-    margin: 20,
-    borderRadius: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
-  },
+  bookingCard: {},
   bookingTitle: {
     fontSize: 20,
     fontWeight: 'bold',

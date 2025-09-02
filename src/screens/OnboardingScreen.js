@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,16 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import { useAppContext } from '../context/AppContext';
 
+const { width } = Dimensions.get('window');
+
 const OnboardingScreen = ({ navigation }) => {
+  const flatListRef = useRef(null);
+
   const { currentOnboardingStep, setCurrentOnboardingStep, onboardingSteps } =
     useAppContext();
 
@@ -38,33 +44,40 @@ const OnboardingScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.onboardingContent}>
-        <View style={styles.imageContainer}>
-          <Text style={styles.onboardingImage}>
-            {onboardingSteps[currentOnboardingStep].image}
-          </Text>
-        </View>
+      <FlatList
+        ref={flatListRef}
+        data={onboardingSteps}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(_, index) => index.toString()}
+        onMomentumScrollEnd={ev => {
+          const index = Math.round(ev.nativeEvent.contentOffset.x / width);
+          setCurrentOnboardingStep(index);
+        }}
+        renderItem={({ item }) => (
+          <View style={[styles.onboardingContent, { width }]}>
+            <View style={styles.imageContainer}>
+              <Text style={styles.onboardingImage}>{item.image}</Text>
+            </View>
+            <Text style={styles.onboardingTitle}>{item.title}</Text>
+            <Text style={styles.onboardingDescription}>{item.description}</Text>
+          </View>
+        )}
+      />
 
-        <Text style={styles.onboardingTitle}>
-          {onboardingSteps[currentOnboardingStep].title}
-        </Text>
-        <Text style={styles.onboardingDescription}>
-          {onboardingSteps[currentOnboardingStep].description}
-        </Text>
-
-        <View style={styles.dotsContainer}>
-          {onboardingSteps.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                index === currentOnboardingStep
-                  ? styles.activeDot
-                  : styles.inactiveDot,
-              ]}
-            />
-          ))}
-        </View>
+      <View style={styles.dotsContainer}>
+        {onboardingSteps.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              index === currentOnboardingStep
+                ? styles.activeDot
+                : styles.inactiveDot,
+            ]}
+          />
+        ))}
       </View>
 
       <View style={styles.buttonContainer}>
@@ -122,7 +135,8 @@ const styles = StyleSheet.create({
   },
   dotsContainer: {
     flexDirection: 'row',
-    marginBottom: 40,
+    bottom: 100,
+    alignSelf: 'center',
   },
   dot: {
     width: 12,
@@ -170,3 +184,101 @@ const styles = StyleSheet.create({
 });
 
 export default OnboardingScreen;
+
+// import React, { useRef } from 'react';
+// import {
+//   View,
+//   Text,
+//   StyleSheet,
+//   TouchableOpacity,
+//   SafeAreaView,
+//   StatusBar,
+//   FlatList,
+//   Dimensions,
+// } from 'react-native';
+// import { useAppContext } from '../context/AppContext';
+
+// const { width } = Dimensions.get('window');
+
+// const OnboardingScreen = ({ navigation }) => {
+//   const { currentOnboardingStep, setCurrentOnboardingStep, onboardingSteps } =
+//     useAppContext();
+//   const flatListRef = useRef(null);
+
+//   const handleSkip = () => navigation.navigate('Login');
+//   const handleNext = () => {
+//     if (currentOnboardingStep < onboardingSteps.length - 1) {
+//       flatListRef.current.scrollToIndex({ index: currentOnboardingStep + 1 });
+//     } else {
+//       navigation.navigate('SignUp');
+//     }
+//   };
+//   const handleLogin = () => navigation.navigate('Login');
+
+//   return (
+//     <SafeAreaView style={styles.container}>
+//       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+
+//       {/* Skip Button */}
+//       <View style={styles.skipContainer}>
+//         <TouchableOpacity onPress={handleSkip}>
+//           <Text style={styles.skipText}>SKIP</Text>
+//         </TouchableOpacity>
+//       </View>
+
+//       {/* Slides */}
+//       <FlatList
+//         ref={flatListRef}
+//         data={onboardingSteps}
+//         horizontal
+//         pagingEnabled
+//         showsHorizontalScrollIndicator={false}
+//         keyExtractor={(_, index) => index.toString()}
+//         onMomentumScrollEnd={ev => {
+//           const index = Math.round(ev.nativeEvent.contentOffset.x / width);
+//           setCurrentOnboardingStep(index);
+//         }}
+//         renderItem={({ item }) => (
+//           <View style={[styles.onboardingContent, { width }]}>
+//             <View style={styles.imageContainer}>
+//               <Text style={styles.onboardingImage}>{item.image}</Text>
+//             </View>
+//             <Text style={styles.onboardingTitle}>{item.title}</Text>
+//             <Text style={styles.onboardingDescription}>{item.description}</Text>
+//           </View>
+//         )}
+//       />
+
+//       {/* Dots */}
+//       <View style={styles.dotsContainer}>
+//         {onboardingSteps.map((_, index) => (
+//           <View
+//             key={index}
+//             style={[
+//               styles.dot,
+//               index === currentOnboardingStep
+//                 ? styles.activeDot
+//                 : styles.inactiveDot,
+//             ]}
+//           />
+//         ))}
+//       </View>
+
+//       {/* Buttons */}
+//       <View style={styles.buttonContainer}>
+//         <TouchableOpacity style={styles.outlineButton} onPress={handleLogin}>
+//           <Text style={styles.outlineButtonText}>LOGIN</Text>
+//         </TouchableOpacity>
+//         <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+//           <Text style={styles.primaryButtonText}>
+//             {currentOnboardingStep === onboardingSteps.length - 1
+//               ? 'SIGN UP'
+//               : 'NEXT'}
+//           </Text>
+//         </TouchableOpacity>
+//       </View>
+//     </SafeAreaView>
+//   );
+// };
+
+// export default OnboardingScreen;
