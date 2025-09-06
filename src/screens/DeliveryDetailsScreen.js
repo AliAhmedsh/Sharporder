@@ -11,8 +11,9 @@ import {
   Modal,
 } from 'react-native';
 import { useAppContext } from '../context/AppContext';
+import { useNavigation } from '@react-navigation/native';
 
-const DeliveryDetailsScreen = ({ navigation }) => {
+const DeliveryDetailsScreen = () => {
   const {
     formData,
     setFormData,
@@ -20,7 +21,7 @@ const DeliveryDetailsScreen = ({ navigation }) => {
     setShowTruckSelector,
     truckTypes,
   } = useAppContext();
-
+const navigation = useNavigation();
   const handleContinue = () => {
     navigation.navigate('TripDetails');
   };
