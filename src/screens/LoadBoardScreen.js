@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
 import { useAppContext } from '../context/AppContext';
-import back from '../assets/back.png';
+import back from '../assets/icons/back.png';
+import emptyStateImage from '../assets/empty-load-board.png';
 
 const LoadBoardScreen = ({ navigation }) => {
   const { 
@@ -88,6 +89,13 @@ const LoadBoardScreen = ({ navigation }) => {
     </View>
   );
 
+  // Empty State Component
+  const EmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <Image source={emptyStateImage} style={styles.emptyStateImage} />
+    </View>
+  );
+
   const BidsDrawer = () => (
     <Modal
       visible={showLoadDrawer}
@@ -151,15 +159,6 @@ const LoadBoardScreen = ({ navigation }) => {
     </Modal>
   );
 
-  // Sample loads data for demonstration
-  const sampleLoads = [
-    { id: 1, loadNumber: '124', status: 'In Transit', numberOfBids: 12 },
-    { id: 2, loadNumber: '124', status: 'Cancelled', numberOfBids: 12 },
-    { id: 3, loadNumber: '124', status: 'Delivered', numberOfBids: 12 },
-  ];
-
-  const displayLoads = loads.length > 0 ? loads : sampleLoads;
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -190,12 +189,19 @@ const LoadBoardScreen = ({ navigation }) => {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.loadsList}
+        contentContainerStyle={[
+          styles.loadsList,
+          loads.length === 0 && styles.emptyScrollView
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        {displayLoads.map((load) => (
-          <LoadCard key={load.id} load={load} />
-        ))}
+        {loads.length > 0 ? (
+          loads.map((load) => (
+            <LoadCard key={load.id} load={load} />
+          ))
+        ) : (
+          <EmptyState />
+        )}
       </ScrollView>
       
       <View style={styles.bottomContainer}>
@@ -291,6 +297,24 @@ const styles = StyleSheet.create({
   loadsList: {
     padding: 16,
     paddingBottom: 100,
+  },
+  emptyScrollView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  emptyStateImage: {
+    width: 300,
+    height: 300,
+    marginBottom: 20,
+    resizeMode: 'contain',
   },
   loadCard: {
     backgroundColor: '#FFF',

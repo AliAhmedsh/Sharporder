@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,16 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { useAppContext } from '../context/AppContext';
+import logo from '../assets/icons/logo.png';
+// import fingerprint from '../assets/icons/fingerprint.png';
+import eye from '../assets/icons/eye.png';
 
 const LoginScreen = ({ navigation }) => {
   const { formData, setFormData } = useAppContext();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = () => {
     navigation.navigate('Dashboard');
@@ -25,55 +30,71 @@ const LoginScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-      <ScrollView style={styles.formContainer}>
+      <ScrollView 
+        style={styles.formContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.loginLogoContainer}>
-          <Text style={styles.logoIcon}>🚛</Text>
-          <Text style={styles.logoText}>Sharporder</Text>
+          <Image source={logo} style={styles.logoImage} />
         </View>
 
-        <Text style={styles.loginTitle}>Welcome back</Text>
-        <Text style={styles.loginSubtitle}>
-          Sign in to your account to continue shipping
-        </Text>
+        <View style={styles.formSection}>
+          <Text style={styles.loginTitle}>Welcome back</Text>
+          <Text style={styles.loginSubtitle}>
+            Sign in to your account to continue shipping
+          </Text>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Phone number</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.phone}
-            onChangeText={text => setFormData({ ...formData, phone: text })}
-            keyboardType="phone-pad"
-          />
-        </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Phone number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="+234 08012345678"
+              value={formData.phone}
+              onChangeText={text => setFormData({ ...formData, phone: text })}
+              keyboardType="phone-pad"
+              placeholderTextColor="#C0C0C0"
+            />
+          </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter here"
-            value={formData.password}
-            onChangeText={text => setFormData({ ...formData, password: text })}
-            secureTextEntry
-          />
-        </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Password</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter here"
+                value={formData.password}
+                onChangeText={text => setFormData({ ...formData, password: text })}
+                secureTextEntry={!showPassword}
+                placeholderTextColor="#C0C0C0"
+              />
+              <TouchableOpacity 
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
+                <Image source={eye} style={styles.eyeIcon} />
+              </TouchableOpacity>
+            </View>
+          </View>
 
-        <View style={styles.loginLinks}>
-          <TouchableOpacity>
-            <Text style={styles.linkText}>Forgot password?</Text>
+          <View style={styles.loginLinks}>
+            <TouchableOpacity>
+              <Text style={styles.signUpText}>Forgot password?</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSignUp}>
+              <Text style={styles.linkText}>Don't have an account? <Text style={styles.signUpText}>Sign up</Text></Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.fullWidthButton} onPress={handleLogin}>
+            <Text style={styles.fullWidthButtonText}>LOGIN</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSignUp}>
-            <Text style={styles.linkText}>Don't have an account? Sign up</Text>
-          </TouchableOpacity>
+
+          {/* <TouchableOpacity style={styles.fingerprintButton}>
+            <Image source={fingerprint} style={styles.fingerprintIcon} />
+            <Text style={styles.fingerprintText}>LOGIN WITH FINGERPRINT</Text>
+          </TouchableOpacity> */}
         </View>
-
-        <TouchableOpacity style={styles.fullWidthButton} onPress={handleLogin}>
-          <Text style={styles.fullWidthButtonText}>LOGIN</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.fingerprintButton}>
-          <Text style={styles.fingerprintIcon}>👆</Text>
-          <Text style={styles.fingerprintText}>LOGIN WITH FINGERPRINT</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -86,38 +107,41 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
   },
   loginLogoContainer: {
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 60,
+    marginTop: 60,
+    marginBottom: 30,
   },
-  logoIcon: {
-    fontSize: 80,
-    marginBottom: 20,
+  logoImage: {
+    width: 150,
+    height: 150,
+    resizeMode: 'contain',
   },
-  logoText: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: '#00BFFF',
+  formSection: {
+    flex: 1,
   },
   loginTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
     color: '#333333',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   loginSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666666',
     marginBottom: 40,
+    lineHeight: 20,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333333',
     marginBottom: 8,
     fontWeight: '500',
@@ -126,49 +150,82 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#FAFAFA',
+    color: '#333333',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    backgroundColor: '#FAFAFA',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#333333',
+  },
+  eyeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  eyeIcon: {
+    width: 30,
+    height: 20,
+    tintColor: '#007AFF',
   },
   loginLinks: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 30,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 40,
   },
   linkText: {
-    color: '#00BFFF',
+    color: '#000000',
     fontSize: 14,
   },
+  signUpText: {
+    fontWeight: '600',
+    color: '#007AFF',
+  },
   fullWidthButton: {
-    backgroundColor: '#00BFFF',
-    paddingVertical: 15,
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
-    marginHorizontal: 20,
+    marginBottom: 40,
   },
   fullWidthButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  fingerprintButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 30,
-  },
-  fingerprintIcon: {
-    fontSize: 20,
-    marginRight: 10,
-  },
-  fingerprintText: {
-    color: '#00BFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  // fingerprintButton: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   justifyContent: 'center',
+  //   paddingVertical: 16,
+  // },
+  // fingerprintIcon: {
+  //   width: 24,
+  //   height: 24,
+  //   marginRight: 10,
+  //   tintColor: '#007AFF',
+  // },
+  // fingerprintText: {
+  //   color: '#007AFF',
+  //   fontSize: 14,
+  //   fontWeight: '600',
+  //   letterSpacing: 0.5,
+  // },
 });
 
 export default LoginScreen;

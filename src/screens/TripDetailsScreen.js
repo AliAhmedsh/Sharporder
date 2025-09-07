@@ -8,114 +8,185 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
+  Modal,
 } from 'react-native';
 import { useAppContext } from '../context/AppContext';
 
-const TripDetailsScreen = ({ navigation }) => {
+const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
   const { formData, setFormData } = useAppContext();
 
   const handleSearchDriver = () => {
+    onClose();
     navigation.navigate('DriverSearch');
   };
 
+  const handleBackdropPress = () => {
+    onClose();
+    // Navigate to DeliveryDetails when backdrop is pressed
+    if (navigation) {
+      navigation.navigate('DeliveryDetails');
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-      <ScrollView style={styles.formContainer}>
-        <Text style={styles.pageTitle}>Trip details</Text>
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={styles.modalOverlay}>
+        {/* Backdrop - only covers the area above the modal */}
+        <TouchableOpacity 
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={handleBackdropPress}
+        />
+        
+        {/* Modal Content */}
+        <View style={styles.modalContainer}>
+          <View style={styles.dragHandle} />
+          
+          <ScrollView 
+            style={styles.formContainer}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={true}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.pageTitle}>Trip details</Text>
 
-        <View style={styles.tripDetailCard}>
-          <Text style={styles.inputLabel}>Pickup address</Text>
-          <Text style={styles.addressText}>
-            15 Bode Thomas Street, Surulere, Lagos
-          </Text>
+            <View style={styles.tripDetailCard}>
+              <Text style={styles.inputLabel}>Pickup address</Text>
+              <Text style={styles.addressText}>
+                {formData.pickupAddress || '15 Bode Thomas Street, Surulere, Lagos'}
+              </Text>
+            </View>
+
+            <View style={styles.tripDetailCard}>
+              <Text style={styles.inputLabel}>Delivery address</Text>
+              <Text style={styles.addressText}>
+                {formData.deliveryAddress || '35 Hakeem Dickson Street, Lekki Phase 1...'}
+              </Text>
+            </View>
+
+            <View style={styles.truckSelectedCard}>
+              <View style={styles.truckIconContainer}>
+                <Text style={styles.truckIcon}>🚛</Text>
+              </View>
+              <View style={styles.truckDetails}>
+                <Text style={styles.truckName}>
+                  {formData.truckType || 'Standard Rigid Dump Truck'}
+                </Text>
+                <Text style={styles.truckSpec}>Capacity: 10-30 cubic yards</Text>
+                <Text style={styles.truckSpec}>Load weight: 15-25 tons</Text>
+                <Text style={styles.truckSpec}>Tyres: 6</Text>
+              </View>
+            </View>
+
+            <View style={styles.tripDetailCard}>
+              <Text style={styles.inputLabel}>Load description</Text>
+              <Text style={styles.addressText}>
+                {formData.loadDescription || 'Sharp sand for construction'}
+              </Text>
+            </View>
+
+            <View style={styles.tripDetailCard}>
+              <Text style={styles.inputLabel}>Load image</Text>
+              <View style={styles.imageContainer}>
+                <Text style={styles.imageText}>img_20250807.jpg</Text>
+                <Text style={styles.uploadIcon}>↗</Text>
+              </View>
+            </View>
+
+            <View style={styles.tripDetailCard}>
+              <Text style={styles.inputLabel}>Recipient's name</Text>
+              <Text style={styles.addressText}>
+                {formData.recipientName || 'Femi Otedola'}
+              </Text>
+            </View>
+
+            <View style={styles.tripDetailCard}>
+              <Text style={styles.inputLabel}>Recipient's number</Text>
+              <Text style={styles.addressText}>
+                {formData.recipientNumber || '+234 08012345678'}
+              </Text>
+            </View>
+
+            <View style={styles.fareContainer}>
+              <Text style={styles.inputLabel}>Fare offer</Text>
+              <View style={styles.fareInputContainer}>
+                <Text style={styles.currencyText}>NGN</Text>
+                <TextInput
+                  style={styles.fareInput}
+                  value={formData.fareOffer || '10000'}
+                  onChangeText={text => setFormData({ ...formData, fareOffer: text })}
+                  keyboardType="numeric"
+                  placeholder="10000"
+                  placeholderTextColor="#C0C0C0"
+                />
+                <TouchableOpacity style={styles.dropdownButton}>
+                  <Text style={styles.dropdownIcon}>⌄</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.fareNoteContainer}>
+              <Text style={styles.fareNoteIcon}>ⓘ</Text>
+              <Text style={styles.fareNote}>
+                Please note that the recommended minimum fare for this trip is NGN 10,000.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.fullWidthButton}
+              onPress={handleSearchDriver}
+            >
+              <Text style={styles.fullWidthButtonText}>SEARCH FOR DRIVER</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-
-        <View style={styles.tripDetailCard}>
-          <Text style={styles.inputLabel}>Delivery address</Text>
-          <Text style={styles.addressText}>
-            35 Hakeem Dickson Street, Lekki Phase 1...
-          </Text>
-        </View>
-
-        <View style={styles.truckSelectedCard}>
-          <Text style={styles.truckIcon}>🚛</Text>
-          <View style={styles.truckDetails}>
-            <Text style={styles.truckName}>Standard Rigid Dump Truck</Text>
-            <Text style={styles.truckSpec}>Capacity: 10-30 cubic yards</Text>
-            <Text style={styles.truckSpec}>Load weight: 15-25 tons</Text>
-            <Text style={styles.truckSpec}>Tyres: 6</Text>
-          </View>
-        </View>
-
-        <View style={styles.tripDetailCard}>
-          <Text style={styles.inputLabel}>Load description</Text>
-          <Text style={styles.addressText}>Sharp sand for construction</Text>
-        </View>
-
-        <View style={styles.tripDetailCard}>
-          <Text style={styles.inputLabel}>Load image</Text>
-          <Text style={styles.addressText}>img_20250807.jpg ↑</Text>
-        </View>
-
-        <View style={styles.tripDetailCard}>
-          <Text style={styles.inputLabel}>Recipient's name</Text>
-          <Text style={styles.addressText}>Femi Otedola</Text>
-        </View>
-
-        <View style={styles.tripDetailCard}>
-          <Text style={styles.inputLabel}>Recipient's number</Text>
-          <Text style={styles.addressText}>+234 08012345678</Text>
-        </View>
-
-        <View style={styles.fareContainer}>
-          <Text style={styles.inputLabel}>Fare offer</Text>
-          <TextInput
-            style={styles.fareInput}
-            value={`NGN ${formData.fareOffer}`}
-            onChangeText={text =>
-              setFormData({ ...formData, fareOffer: text.replace('NGN ', '') })
-            }
-          />
-        </View>
-
-        <Text style={styles.fareNote}>
-          ⓘ Please note that the recommended minimum fare for this trip is NGN
-          10,000.
-        </Text>
-
-        <TouchableOpacity
-          style={styles.fullWidthButton}
-          onPress={handleSearchDriver}
-        >
-          <Text style={styles.fullWidthButtonText}>SEARCH FOR DRIVER</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  backdrop: {
+    flex: 1,
+  },
+  modalContainer: {
     backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '90%',
+    paddingTop: 8,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   formContainer: {
     flex: 1,
     paddingHorizontal: 20,
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   pageTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '600',
     color: '#333333',
-    marginTop: 20,
     marginBottom: 30,
   },
   tripDetailCard: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333333',
     marginBottom: 8,
     fontWeight: '500',
@@ -123,8 +194,8 @@ const styles = StyleSheet.create({
   addressText: {
     fontSize: 16,
     color: '#333333',
-    backgroundColor: '#F8F8F8',
-    padding: 15,
+    backgroundColor: '#FAFAFA',
+    padding: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -132,16 +203,25 @@ const styles = StyleSheet.create({
   truckSelectedCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 10,
-    marginBottom: 20,
-    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
+    marginBottom: 24,
+    backgroundColor: '#FAFAFA',
+  },
+  truckIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   truckIcon: {
-    fontSize: 30,
-    marginRight: 15,
+    fontSize: 24,
+    color: '#007AFF',
   },
   truckDetails: {
     flex: 1,
@@ -150,43 +230,94 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333333',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   truckSpec: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666666',
-    marginBottom: 2,
+    marginBottom: 1,
+    lineHeight: 18,
+  },
+  imageContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  imageText: {
+    fontSize: 16,
+    color: '#333333',
+  },
+  uploadIcon: {
+    fontSize: 16,
+    color: '#007AFF',
   },
   fareContainer: {
     marginBottom: 20,
   },
-  fareInput: {
+  fareInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingVertical: 15,
-    paddingHorizontal: 15,
+    backgroundColor: '#FAFAFA',
+  },
+  currencyText: {
     fontSize: 16,
-    backgroundColor: '#F8F8F8',
+    color: '#666666',
+    paddingLeft: 16,
+    paddingRight: 8,
+  },
+  fareInput: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingRight: 8,
+    fontSize: 16,
+    color: '#333333',
+  },
+  dropdownButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  dropdownIcon: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  fareNoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 40,
+    paddingHorizontal: 4,
+  },
+  fareNoteIcon: {
+    fontSize: 16,
+    color: '#FF6B35',
+    marginRight: 8,
+    marginTop: 1,
   },
   fareNote: {
+    flex: 1,
     fontSize: 14,
     color: '#FF6B35',
-    marginBottom: 30,
-    paddingHorizontal: 10,
+    lineHeight: 20,
   },
   fullWidthButton: {
-    backgroundColor: '#00BFFF',
-    paddingVertical: 15,
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
-    marginHorizontal: 20,
+    marginBottom: 40,
   },
   fullWidthButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
 });
 

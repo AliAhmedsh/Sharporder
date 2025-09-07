@@ -8,10 +8,11 @@ import {
   StatusBar,
   FlatList,
   Dimensions,
+  Image
 } from 'react-native';
 import { useAppContext } from '../context/AppContext';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const OnboardingScreen = ({ navigation }) => {
   const flatListRef = useRef(null);
@@ -58,10 +59,12 @@ const OnboardingScreen = ({ navigation }) => {
         renderItem={({ item }) => (
           <View style={[styles.onboardingContent, { width }]}>
             <View style={styles.imageContainer}>
-              <Text style={styles.onboardingImage}>{item.image}</Text>
+              <Image source={item.image} style={styles.onboardingImage} />
             </View>
-            <Text style={styles.onboardingTitle}>{item.title}</Text>
-            <Text style={styles.onboardingDescription}>{item.description}</Text>
+            <View style={styles.textContainer}>
+              <Text style={styles.onboardingTitle}>{item.title}</Text>
+              <Text style={styles.onboardingDescription}>{item.description}</Text>
+            </View>
           </View>
         )}
       />
@@ -114,10 +117,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   imageContainer: {
-    marginBottom: 60,
+    flex: 0.6,  // 60% of available space
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    top: 20,
+    maxHeight: height * 0.5,  // Maximum 50% of screen height
   },
   onboardingImage: {
-    fontSize: 120,
+    width: width * 0.8,  // 80% of screen width
+    height: '100%',      // Fill container height
+    maxWidth: 300,       // Maximum width constraint
+    maxHeight: 300,      // Maximum height constraint
+    resizeMode: 'contain', // Maintain aspect ratio
+  },
+  textContainer: {
+    flex: 0.4,  // 40% of available space
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 20,
   },
   onboardingTitle: {
     fontSize: 32,
@@ -134,8 +152,9 @@ const styles = StyleSheet.create({
     marginBottom: 60,
   },
   dotsContainer: {
+    marginTop: 20,
     flexDirection: 'row',
-    bottom: 100,
+    bottom: 60,
     alignSelf: 'center',
   },
   dot: {

@@ -22,12 +22,12 @@ import {
 import MapView from 'react-native-maps';
 import DeliveryDetailsScreen from './DeliveryDetailsScreen';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import hamburger from '../assets/hamburger.png';
-import headset from '../assets/headset.png';
-import help from '../assets/help.png';
-import payments from '../assets/payments.png';
-import shipments from '../assets/shipments.png';
-import loadboard from '../assets/loadboard.png';
+import hamburger from '../assets/icons/hamburger.png';
+import headset from '../assets/icons/headset.png';
+import help from '../assets/icons/help.png';
+import payments from '../assets/icons/payments.png';
+import shipments from '../assets/icons/shipments.png';
+import loadboard from '../assets/icons/loadboard.png';
 
 const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSuggestionPress }) => {
   const suggestions = ['Home', 'Office', 'Warehouse', 'Airport', 'Mall', 'Harbor', 'Central Park'];
@@ -45,7 +45,7 @@ const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSugge
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
-          placeholder="Where are we going?"
+          placeholder="Who are we delivering to?"
           value={query}
           onChangeText={setQuery}
           onSubmitEditing={searchLocation}

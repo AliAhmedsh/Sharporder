@@ -1,6 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, SafeAreaView, StatusBar, Modal } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, SafeAreaView, StatusBar, Modal, Image } from 'react-native';
 import { useAppContext } from '../context/AppContext';
+import back from '../assets/icons/back.png';
+import eye from '../assets/icons/eye.png';
 
 const SignUpScreen = ({ navigation }) => {
   const { 
@@ -10,6 +12,11 @@ const SignUpScreen = ({ navigation }) => {
     setShowOTPModal 
   } = useAppContext();
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '']);
+
   const handleBack = () => {
     navigation.goBack();
   };
@@ -18,125 +25,235 @@ const SignUpScreen = ({ navigation }) => {
     navigation.navigate('Dashboard');
   };
 
+  const handleOTPNumber = (number) => {
+    const currentIndex = otpValues.findIndex(val => val === '');
+    if (currentIndex !== -1 && currentIndex < 5) {
+      const newOtpValues = [...otpValues];
+      newOtpValues[currentIndex] = number.toString();
+      setOtpValues(newOtpValues);
+      
+      // Auto complete when all 5 digits are entered
+      if (currentIndex === 4) {
+        setTimeout(() => {
+          setShowOTPModal(false);
+          handleOTPComplete();
+        }, 500);
+      }
+    }
+  };
+
+  const handleOTPDelete = () => {
+    const lastFilledIndex = otpValues.map((val, index) => val !== '' ? index : -1).filter(index => index !== -1).pop();
+    if (lastFilledIndex !== undefined) {
+      const newOtpValues = [...otpValues];
+      newOtpValues[lastFilledIndex] = '';
+      setOtpValues(newOtpValues);
+    }
+  };
+
+  const closeOTPModal = () => {
+    setShowOTPModal(false);
+    setOtpValues(['', '', '', '', '']);
+  };
+
   return (
-  <SafeAreaView style={styles.container}>
-    <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-    <ScrollView style={styles.formContainer}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create your account</Text>
-        <Text style={styles.headerSubtitle}>Please provide accurate details to proceed</Text>
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Business name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Full name"
-          value={formData.fullName}
-          onChangeText={(text) => setFormData({...formData, fullName: text})}
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Email address</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Email address"
-          value={formData.email}
-          onChangeText={(text) => setFormData({...formData, email: text})}
-          keyboardType="email-address"
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Phone number</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.phone}
-          onChangeText={(text) => setFormData({...formData, phone: text})}
-          keyboardType="phone-pad"
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter here"
-          value={formData.password}
-          onChangeText={(text) => setFormData({...formData, password: text})}
-          secureTextEntry
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Confirm password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter here"
-          value={formData.confirmPassword}
-          onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
-          secureTextEntry
-        />
-      </View>
-
-      <View style={styles.checkboxContainer}>
-        <View style={styles.checkbox} />
-        <Text style={styles.checkboxText}>
-          I agree to the <Text style={styles.linkText}>Terms and Conditions</Text> and{' '}
-          <Text style={styles.linkText}>Privacy policy</Text> of this platform
-        </Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.fullWidthButton}
-        onPress={() => setShowOTPModal(true)}
-      >
-        <Text style={styles.fullWidthButtonText}>CREATE ACCOUNT</Text>
-      </TouchableOpacity>
-    </ScrollView>
-
-    {/* OTP Modal */}
-    <Modal visible={showOTPModal} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={styles.otpModal}>
-          <Text style={styles.otpTitle}>OTP verification</Text>
-          <Text style={styles.otpDescription}>
-            Enter the 5 digit code sent to your registered phone number below to verify your account.
-          </Text>
-          
-          <View style={styles.otpInputContainer}>
-            {[1, 2, 3, 4, 5].map((_, index) => (
-              <View key={index} style={styles.otpInput} />
-            ))}
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Image source={back} style={styles.backArrow} />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Create your account</Text>
+            <Text style={styles.headerSubtitle}>Please provide accurate details to proceed</Text>
           </View>
-          
-          <View style={styles.keypadContainer}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((number, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.keypadButton}
-                onPress={() => {
-                  if (index === 9) {
-                    setShowOTPModal(false);
-                    handleOTPComplete();
-                  }
-                }}
-              >
-                <Text style={styles.keypadButtonText}>{number}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.keypadButton}>
-              <Text style={styles.keypadButtonText}>DELETE</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Business name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Full name"
+            value={formData.businessName}
+            onChangeText={(text) => setFormData({...formData, businessName: text})}
+            placeholderTextColor="#C0C0C0"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Email address</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Email address"
+            value={formData.email}
+            onChangeText={(text) => setFormData({...formData, email: text})}
+            keyboardType="email-address"
+            placeholderTextColor="#C0C0C0"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Phone number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="+234 08012345678"
+            value={formData.phone}
+            onChangeText={(text) => setFormData({...formData, phone: text})}
+            keyboardType="phone-pad"
+            placeholderTextColor="#C0C0C0"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Password</Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Enter here"
+              value={formData.password}
+              onChangeText={(text) => setFormData({...formData, password: text})}
+              secureTextEntry={!showPassword}
+              placeholderTextColor="#C0C0C0"
+            />
+            <TouchableOpacity 
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
+            >
+              <Image source={eye} style={styles.eyeIcon}/>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
-    </Modal>
-  </SafeAreaView>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Confirm password</Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Enter here"
+              value={formData.confirmPassword}
+              onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
+              secureTextEntry={!showConfirmPassword}
+              placeholderTextColor="#C0C0C0"
+            />
+            <TouchableOpacity 
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={styles.eyeButton}
+            >
+              <Image source={eye} style={styles.eyeIcon}/>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <TouchableOpacity 
+          style={styles.checkboxContainer}
+          onPress={() => setIsChecked(!isChecked)}
+        >
+          <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
+            {isChecked && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.checkboxText}>
+            I agree to the <Text style={styles.linkText}>Terms and Conditions</Text> and{' '}
+            <Text style={styles.linkText}>Privacy policy</Text> of this platform
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.fullWidthButton}
+          onPress={() => setShowOTPModal(true)}
+        >
+          <Text style={styles.fullWidthButtonText}>CREATE ACCOUNT</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* OTP Modal */}
+      <Modal visible={showOTPModal} transparent animationType="slide">
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={closeOTPModal}
+        >
+          <TouchableOpacity 
+            style={styles.otpModal}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.dragHandle} />
+            
+            <Text style={styles.otpTitle}>OTP verification</Text>
+            <Text style={styles.otpDescription}>
+              Enter the 5 digit code sent to your registered phone number below to verify your account.
+            </Text>
+            
+            <View style={styles.otpInputContainer}>
+              {otpValues.map((value, index) => (
+                <View key={index} style={styles.otpInput}>
+                  {value !== '' && <Text style={styles.otpInputText}>{value}</Text>}
+                </View>
+              ))}
+            </View>
+            
+            <View style={styles.keypadContainer}>
+              {/* Row 1: 1, 2, 3 */}
+              <View style={styles.keypadRow}>
+                {[1, 2, 3].map((number) => (
+                  <TouchableOpacity
+                    key={number}
+                    style={styles.keypadButton}
+                    onPress={() => handleOTPNumber(number)}
+                  >
+                    <Text style={styles.keypadButtonText}>{number}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Row 2: 4, 5, 6 */}
+              <View style={styles.keypadRow}>
+                {[4, 5, 6].map((number) => (
+                  <TouchableOpacity
+                    key={number}
+                    style={styles.keypadButton}
+                    onPress={() => handleOTPNumber(number)}
+                  >
+                    <Text style={styles.keypadButtonText}>{number}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Row 3: 7, 8, 9 */}
+              <View style={styles.keypadRow}>
+                {[7, 8, 9].map((number) => (
+                  <TouchableOpacity
+                    key={number}
+                    style={styles.keypadButton}
+                    onPress={() => handleOTPNumber(number)}
+                  >
+                    <Text style={styles.keypadButtonText}>{number}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Row 4: 0, DELETE */}
+              <View style={styles.keypadRow}>
+                <View style={styles.emptyKeypadSpace} />
+                <TouchableOpacity
+                  style={styles.keypadButton}
+                  onPress={() => handleOTPNumber(0)}
+                >
+                  <Text style={styles.keypadButtonText}>0</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.deleteButton}
+                  onPress={handleOTPDelete}
+                >
+                  <Text style={styles.deleteButtonText}>DELETE</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    </SafeAreaView>
   );
 };
 
@@ -151,30 +268,37 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 20,
-    marginBottom: 30,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 40,
+  },
+  backButton: {
+    marginRight: 15,
+    padding: 5,
   },
   backArrow: {
-    fontSize: 24,
-    color: '#00BFFF',
-    marginRight: 15,
+    width: 20,
+    height: 20,
+    tintColor: '#007AFF',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '600',
     color: '#333333',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666666',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333333',
     marginBottom: 8,
     fontWeight: '500',
@@ -183,24 +307,60 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#FAFAFA',
+    color: '#333333',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    backgroundColor: '#FAFAFA',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#333333',
+  },
+  eyeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  eyeIcon: {
+    width: 30,
+    height: 20,
+    tintColor: '#007AFF',
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 30,
+    marginBottom: 40,
+    marginTop: 10,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderWidth: 2,
-    borderColor: '#00BFFF',
-    borderRadius: 4,
-    marginRight: 10,
+    borderColor: '#007AFF',
+    borderRadius: 3,
+    marginRight: 12,
     marginTop: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#007AFF',
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   checkboxText: {
     flex: 1,
@@ -209,20 +369,20 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   linkText: {
-    color: '#00BFFF',
+    color: '#007AFF',
   },
   fullWidthButton: {
-    backgroundColor: '#00BFFF',
-    paddingVertical: 15,
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
-    marginHorizontal: 20,
+    marginBottom: 40,
   },
   fullWidthButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,
@@ -233,10 +393,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingTop: 30,
+    paddingTop: 8,
     paddingHorizontal: 30,
     paddingBottom: 50,
     alignItems: 'center',
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+    marginBottom: 20,
   },
   otpTitle: {
     fontSize: 24,
@@ -261,13 +428,26 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  otpInputText: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#333333',
   },
   keypadContainer: {
+    alignItems: 'center',
+    gap: 15,
+  },
+  keypadRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 20,
-    maxWidth: 250,
+  },
+  emptyKeypadSpace: {
+    width: 70,
+    height: 70,
   },
   keypadButton: {
     width: 70,
@@ -278,7 +458,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   keypadButtonText: {
-    fontSize: 20,
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  deleteButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#333333',
   },

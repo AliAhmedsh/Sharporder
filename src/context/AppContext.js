@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import onboarding1 from '../assets/on-boarding-1.png';
+import onboarding2 from '../assets/on-boarding-2.png';
+import onboarding3 from '../assets/on-boarding-3.png';
+import onboarding4 from '../assets/on-boarding-4.png';
 
 const AppContext = createContext();
 
@@ -185,22 +189,22 @@ export const AppProvider = ({ children }) => {
     {
       title: 'Ship with ease',
       description: 'Send packages anywhere with just a few taps. Our platform connects you with trusted drivers in your area.',
-      image: '🚛',
+      image: onboarding1,
     },
     {
       title: 'Choose your driver',
       description: 'Browse verified drivers, check their ratings, and select the perfect match for your delivery needs.',
-      image: '📋',
+      image: onboarding2,
     },
     {
       title: 'Real-time tracking',
       description: 'Track your package every step of the way with live updates and GPS monitoring for peace of mind.',
-      image: '📍',
+      image: onboarding3,
     },
     {
       title: 'Secure and reliable',
       description: 'Your packages are protected with insurance coverage and verified driver background checks.',
-      image: '🔒',
+      image: onboarding4,
     },
   ];
 
