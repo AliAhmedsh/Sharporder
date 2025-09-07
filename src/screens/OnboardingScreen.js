@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,20 +20,37 @@ const OnboardingScreen = ({ navigation }) => {
   const { currentOnboardingStep, setCurrentOnboardingStep, onboardingSteps } =
     useAppContext();
 
+  // Sync FlatList with currentOnboardingStep changes
+  useEffect(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToIndex({ 
+        index: currentOnboardingStep, 
+        animated: true 
+      });
+    }
+  }, [currentOnboardingStep]);
+
   const handleSkip = () => {
     navigation.navigate('Login');
   };
 
   const handleNext = () => {
     if (currentOnboardingStep < onboardingSteps.length - 1) {
+      // Move to next step - this will trigger the useEffect to scroll
       setCurrentOnboardingStep(currentOnboardingStep + 1);
     } else {
-      navigation.navigate('SignUp');
+      // Last step - navigate to Role Selection
+      navigation.navigate('RoleSelection');
     }
   };
 
   const handleLogin = () => {
     navigation.navigate('Login');
+  };
+
+  // Determine button text based on current step
+  const getButtonText = () => {
+    return currentOnboardingStep === onboardingSteps.length - 1 ? 'CONTINUE' : 'NEXT';
   };
 
   return (
@@ -88,7 +105,7 @@ const OnboardingScreen = ({ navigation }) => {
           <Text style={styles.outlineButtonText}>LOGIN</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
-          <Text style={styles.primaryButtonText}>SIGN UP</Text>
+          <Text style={styles.primaryButtonText}>{getButtonText()}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -203,101 +220,3 @@ const styles = StyleSheet.create({
 });
 
 export default OnboardingScreen;
-
-// import React, { useRef } from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   TouchableOpacity,
-//   SafeAreaView,
-//   StatusBar,
-//   FlatList,
-//   Dimensions,
-// } from 'react-native';
-// import { useAppContext } from '../context/AppContext';
-
-// const { width } = Dimensions.get('window');
-
-// const OnboardingScreen = ({ navigation }) => {
-//   const { currentOnboardingStep, setCurrentOnboardingStep, onboardingSteps } =
-//     useAppContext();
-//   const flatListRef = useRef(null);
-
-//   const handleSkip = () => navigation.navigate('Login');
-//   const handleNext = () => {
-//     if (currentOnboardingStep < onboardingSteps.length - 1) {
-//       flatListRef.current.scrollToIndex({ index: currentOnboardingStep + 1 });
-//     } else {
-//       navigation.navigate('SignUp');
-//     }
-//   };
-//   const handleLogin = () => navigation.navigate('Login');
-
-//   return (
-//     <SafeAreaView style={styles.container}>
-//       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-
-//       {/* Skip Button */}
-//       <View style={styles.skipContainer}>
-//         <TouchableOpacity onPress={handleSkip}>
-//           <Text style={styles.skipText}>SKIP</Text>
-//         </TouchableOpacity>
-//       </View>
-
-//       {/* Slides */}
-//       <FlatList
-//         ref={flatListRef}
-//         data={onboardingSteps}
-//         horizontal
-//         pagingEnabled
-//         showsHorizontalScrollIndicator={false}
-//         keyExtractor={(_, index) => index.toString()}
-//         onMomentumScrollEnd={ev => {
-//           const index = Math.round(ev.nativeEvent.contentOffset.x / width);
-//           setCurrentOnboardingStep(index);
-//         }}
-//         renderItem={({ item }) => (
-//           <View style={[styles.onboardingContent, { width }]}>
-//             <View style={styles.imageContainer}>
-//               <Text style={styles.onboardingImage}>{item.image}</Text>
-//             </View>
-//             <Text style={styles.onboardingTitle}>{item.title}</Text>
-//             <Text style={styles.onboardingDescription}>{item.description}</Text>
-//           </View>
-//         )}
-//       />
-
-//       {/* Dots */}
-//       <View style={styles.dotsContainer}>
-//         {onboardingSteps.map((_, index) => (
-//           <View
-//             key={index}
-//             style={[
-//               styles.dot,
-//               index === currentOnboardingStep
-//                 ? styles.activeDot
-//                 : styles.inactiveDot,
-//             ]}
-//           />
-//         ))}
-//       </View>
-
-//       {/* Buttons */}
-//       <View style={styles.buttonContainer}>
-//         <TouchableOpacity style={styles.outlineButton} onPress={handleLogin}>
-//           <Text style={styles.outlineButtonText}>LOGIN</Text>
-//         </TouchableOpacity>
-//         <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
-//           <Text style={styles.primaryButtonText}>
-//             {currentOnboardingStep === onboardingSteps.length - 1
-//               ? 'SIGN UP'
-//               : 'NEXT'}
-//           </Text>
-//         </TouchableOpacity>
-//       </View>
-//     </SafeAreaView>
-//   );
-// };
-
-// export default OnboardingScreen;

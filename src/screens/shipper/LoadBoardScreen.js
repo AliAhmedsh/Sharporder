@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
-import { useAppContext } from '../context/AppContext';
-import back from '../assets/icons/back.png';
-import emptyStateImage from '../assets/empty-load-board.png';
+import { useAppContext } from '../../context/AppContext';
+import back from '../../assets/icons/back.png';
+import emptyStateImage from '../../assets/empty-load-board.png';
 
 const LoadBoardScreen = ({ navigation }) => {
   const { 

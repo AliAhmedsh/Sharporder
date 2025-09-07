@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
-import { useAppContext } from '../context/AppContext';
-import back from '../assets/icons/back.png';
+import { useAppContext } from '../../context/AppContext';
+import back from '../../assets/icons/back.png';
 
 const MyShipmentsScreen = ({ navigation }) => {
   const { shipments, addShipment, formData } = useAppContext();

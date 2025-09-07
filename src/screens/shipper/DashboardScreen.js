@@ -22,12 +22,12 @@ import {
 import MapView from 'react-native-maps';
 import DeliveryDetailsScreen from './DeliveryDetailsScreen';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import hamburger from '../assets/icons/hamburger.png';
-import headset from '../assets/icons/headset.png';
-import help from '../assets/icons/help.png';
-import payments from '../assets/icons/payments.png';
-import shipments from '../assets/icons/shipments.png';
-import loadboard from '../assets/icons/loadboard.png';
+import hamburger from '../../assets/icons/hamburger.png';
+import headset from '../../assets/icons/headset.png';
+import help from '../../assets/icons/help.png';
+import payments from '../../assets/icons/payments.png';
+import shipments from '../../assets/icons/shipments.png';
+import loadboard from '../../assets/icons/loadboard.png';
 
 const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSuggestionPress }) => {
   const suggestions = ['Home', 'Office', 'Warehouse', 'Airport', 'Mall', 'Harbor', 'Central Park'];

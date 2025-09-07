@@ -10,7 +10,7 @@ import {
   StatusBar,
   Modal,
 } from 'react-native';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 import { useNavigation } from '@react-navigation/native';
 
 const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {

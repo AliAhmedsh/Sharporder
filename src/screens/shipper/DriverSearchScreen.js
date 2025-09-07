@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Modal, ScrollView, Image } from 'react-native';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 
 const DriverSearchScreen = ({ navigation }) => {
   const { 
@@ -61,7 +61,7 @@ const DriverSearchScreen = ({ navigation }) => {
         <View style={styles.mapPlaceholder}>
           {/* Pickup Location Circle */}
           <View style={styles.pickupCircle}>
-            <Image source={require('../assets/pickup.png')} style={styles.pickupImage} />
+            <Image source={require('../../assets/pickup.png')} style={styles.pickupImage} />
           </View>
         </View>
       </View>

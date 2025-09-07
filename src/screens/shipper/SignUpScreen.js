@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, SafeAreaView, StatusBar, Modal, Image } from 'react-native';
-import { useAppContext } from '../context/AppContext';
-import back from '../assets/icons/back.png';
-import eye from '../assets/icons/eye.png';
+import { useAppContext } from '../../context/AppContext';
+import back from '../../assets/icons/back.png';
+import eye from '../../assets/icons/eye.png';
 
 const SignUpScreen = ({ navigation }) => {
   const { 

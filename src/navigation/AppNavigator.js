@@ -8,6 +8,7 @@ import {
   OnboardingScreen,
   LoginScreen,
   SignUpScreen,
+  RoleSelectionScreen,
   DashboardScreen,
   DeliveryDetailsScreen,
   TripDetailsScreen,
@@ -16,6 +17,9 @@ import {
   DeliveryCompleteScreen,
   LoadBoardScreen,
   MyShipmentsScreen,
+  DriverSignupScreen,
+  DriverDashboardScreen,
+  DriverLoadBoardScreen,
 } from '../screens';
 
 const Stack = createNativeStackNavigator();
@@ -31,6 +35,7 @@ const AppNavigator = () => {
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
@@ -44,6 +49,9 @@ const AppNavigator = () => {
         <Stack.Screen name="DeliveryComplete" component={DeliveryCompleteScreen} />
         <Stack.Screen name="LoadBoard" component={LoadBoardScreen} />
         <Stack.Screen name="MyShipments" component={MyShipmentsScreen} />
+        <Stack.Screen name="DriverSignup" component={DriverSignupScreen} />
+        <Stack.Screen name="DriverDashboard" component={DriverDashboardScreen} />
+        <Stack.Screen name="DriverLoadBoard" component={DriverLoadBoardScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

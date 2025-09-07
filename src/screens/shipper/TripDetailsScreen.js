@@ -10,7 +10,7 @@ import {
   StatusBar,
   Modal,
 } from 'react-native';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 
 const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
   const { formData, setFormData } = useAppContext();

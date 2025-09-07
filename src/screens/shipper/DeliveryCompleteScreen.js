@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,14 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
+  Image,
 } from 'react-native';
+import minimap from '../../assets/mini-map.png';
+import back from '../../assets/icons/back.png';
 
 const DeliveryCompleteScreen = ({ navigation }) => {
+  const [rating, setRating] = useState(0);
+
   const handleBack = () => {
     navigation.navigate('Dashboard');
   };
@@ -18,15 +23,19 @@ const DeliveryCompleteScreen = ({ navigation }) => {
     navigation.navigate('Dashboard');
   };
 
+  const handleStarPress = (star) => {
+    setRating(star);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-      <ScrollView style={styles.formContainer}>
+      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack}>
-            <Text style={styles.backArrow}>←</Text>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Image source={back} style={styles.backIcon} />
           </TouchableOpacity>
-          <View>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Delivery complete</Text>
             <Text style={styles.headerSubtitle}>
               Your package has been successfully delivered.
@@ -34,9 +43,8 @@ const DeliveryCompleteScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapText}>🗺️ Delivery Route</Text>
-          <Text style={styles.mapLocationText}>📍 Route Completed</Text>
+        <View style={styles.mapContainer}>
+          <Image source={minimap} style={styles.mapImage} resizeMode="cover" />
         </View>
 
         <View style={styles.deliveryCompleteCard}>
@@ -46,9 +54,7 @@ const DeliveryCompleteScreen = ({ navigation }) => {
             </View>
             <View style={styles.driverInfo}>
               <Text style={styles.driverName}>Kunle Alamu</Text>
-              <Text style={styles.driverDetails}>
-                Standard Rigid Dump Truck
-              </Text>
+              <Text style={styles.driverDetails}>Standard Rigid Dump Truck</Text>
               <Text style={styles.driverDetails}>LSR 123 AB</Text>
             </View>
             <View style={styles.deliveryMeta}>
@@ -59,20 +65,20 @@ const DeliveryCompleteScreen = ({ navigation }) => {
 
           <View style={styles.routeInfo}>
             <View style={styles.routeItem}>
-              <Text style={styles.routeIcon}>🟢</Text>
+              <View style={styles.routeIconContainer}>
+                <View style={[styles.routeIcon, styles.startIcon]} />
+              </View>
               <View style={styles.routeDetails}>
-                <Text style={styles.routeAddress}>
-                  15 Bode Thomas Street, Surulere, Lagos
-                </Text>
+                <Text style={styles.routeAddress}>15 Bode Thomas Street, Surulere, Lagos</Text>
                 <Text style={styles.routeTime}>08:30 AM</Text>
               </View>
             </View>
             <View style={styles.routeItem}>
-              <Text style={styles.routeIcon}>🟣</Text>
+              <View style={styles.routeIconContainer}>
+                <View style={[styles.routeIcon, styles.endIcon]} />
+              </View>
               <View style={styles.routeDetails}>
-                <Text style={styles.routeAddress}>
-                  35 Hakeem Dickson Street, Lekki Phase 1...
-                </Text>
+                <Text style={styles.routeAddress}>35 Hakeem Dickson Street, Lekki Phase 1...</Text>
                 <Text style={styles.routeTime}>12:58 PM</Text>
               </View>
             </View>
@@ -81,8 +87,17 @@ const DeliveryCompleteScreen = ({ navigation }) => {
           <Text style={styles.rateTitle}>Rate your delivery</Text>
           <View style={styles.starContainer}>
             {[1, 2, 3, 4, 5].map(star => (
-              <TouchableOpacity key={star} style={styles.star}>
-                <Text style={styles.starText}>⭐</Text>
+              <TouchableOpacity 
+                key={star} 
+                style={styles.star}
+                onPress={() => handleStarPress(star)}
+              >
+                <Text style={[
+                  styles.starText, 
+                  rating >= star ? styles.starFilled : styles.starEmpty
+                ]}>
+                  ★
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -90,28 +105,31 @@ const DeliveryCompleteScreen = ({ navigation }) => {
 
         <View style={styles.actionGrid}>
           <TouchableOpacity style={styles.actionItem}>
-            <View style={styles.actionIcon}>
-              <Text style={styles.actionIconText}>🧾</Text>
+            <View style={[styles.actionIcon, styles.receiptIcon]}>
+              <Text style={styles.actionIconText}>📄</Text>
             </View>
             <Text style={styles.actionText}>Receipt</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity style={styles.actionItem}>
-            <View style={styles.actionIcon}>
+            <View style={[styles.actionIcon, styles.supportIcon]}>
               <Text style={styles.actionIconText}>🎧</Text>
             </View>
             <Text style={styles.actionText}>Support</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity style={styles.actionItem}>
-            <View style={styles.actionIcon}>
+            <View style={[styles.actionIcon, styles.returnIcon]}>
               <Text style={styles.actionIconText}>↩️</Text>
             </View>
             <Text style={styles.actionText}>Return trip</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity
             style={styles.actionItem}
             onPress={handleRepeatDelivery}
           >
-            <View style={styles.actionIcon}>
+            <View style={[styles.actionIcon, styles.repeatIcon]}>
               <Text style={styles.actionIconText}>🔄</Text>
             </View>
             <Text style={styles.actionText}>Repeat delivery</Text>
@@ -133,67 +151,66 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  backArrow: {
-    fontSize: 24,
-    color: '#00BFFF',
-    marginRight: 15,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 5,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  mapPlaceholder: {
-    height: 200,
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 15,
+    marginTop: 20,
     marginBottom: 20,
   },
-  mapText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  backButton: {
+    marginRight: 15,
+    padding: 5,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#00BFFF',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
     color: '#666666',
   },
-  mapLocationText: {
-    fontSize: 16,
-    color: '#999999',
-    marginTop: 10,
+  mapContainer: {
+    height: 180,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  mapImage: {
+    width: '100%',
+    height: '100%',
   },
   deliveryCompleteCard: {
     backgroundColor: '#ffffff',
     padding: 20,
     marginBottom: 20,
-    borderRadius: 15,
-    elevation: 5,
+    borderRadius: 12,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   driverRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   driverAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
+    marginRight: 15,
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
   },
   driverAvatarText: {
     fontSize: 20,
@@ -202,13 +219,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   driverName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333333',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   driverDetails: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666666',
     marginBottom: 2,
   },
@@ -216,82 +233,114 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   deliveryDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#999999',
+    marginBottom: 4,
   },
   deliveryPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#333333',
   },
   routeInfo: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   routeItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 15,
+    marginBottom: 16,
+  },
+  routeIconContainer: {
+    marginRight: 12,
+    marginTop: 2,
   },
   routeIcon: {
-    fontSize: 16,
-    marginRight: 15,
-    marginTop: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  startIcon: {
+    backgroundColor: '#00C851',
+  },
+  endIcon: {
+    backgroundColor: '#8B5CF6',
   },
   routeDetails: {
     flex: 1,
   },
   routeAddress: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333333',
-    marginBottom: 5,
+    marginBottom: 4,
+    fontWeight: '500',
   },
   routeTime: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666666',
   },
   rateTitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#333333',
-    marginBottom: 15,
+    marginBottom: 16,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   starContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
+    justifyContent: 'center',
   },
   star: {
-    padding: 5,
+    padding: 4,
   },
   starText: {
     fontSize: 24,
   },
+  starFilled: {
+    color: '#FFD700',
+  },
+  starEmpty: {
+    color: '#E0E0E0',
+  },
   actionGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     paddingBottom: 30,
   },
   actionItem: {
-    width: '48%',
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 20,
+    marginHorizontal: 5,
   },
   actionIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F0F8FF',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+  },
+  receiptIcon: {
+    backgroundColor: '#E3F2FD',
+  },
+  supportIcon: {
+    backgroundColor: '#E8F5E8',
+  },
+  returnIcon: {
+    backgroundColor: '#FFF3E0',
+  },
+  repeatIcon: {
+    backgroundColor: '#F3E5F5',
   },
   actionIconText: {
-    fontSize: 24,
+    fontSize: 20,
   },
   actionText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#333333',
     textAlign: 'center',
+    fontWeight: '500',
   },
 });
 

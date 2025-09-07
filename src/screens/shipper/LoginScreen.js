@@ -10,10 +10,10 @@ import {
   StatusBar,
   Image,
 } from 'react-native';
-import { useAppContext } from '../context/AppContext';
-import logo from '../assets/icons/logo.png';
-// import fingerprint from '../assets/icons/fingerprint.png';
-import eye from '../assets/icons/eye.png';
+import { useAppContext } from '../../context/AppContext';
+import logo from '../../assets/icons/logo.png';
+// import fingerprint from '../../assets/icons/fingerprint.png';
+import eye from '../../assets/icons/eye.png';
 
 const LoginScreen = ({ navigation }) => {
   const { formData, setFormData } = useAppContext();
