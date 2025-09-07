@@ -19,6 +19,13 @@ export const AppProvider = ({ children }) => {
   const [showDeliveryAlert, setShowDeliveryAlert] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [alertResolved, setAlertResolved] = useState(false);
+  const [showLoadDrawer, setShowLoadDrawer] = useState(false);
+  const [selectedLoad, setSelectedLoad] = useState(null);
+  const [showBidsModal, setShowBidsModal] = useState(false);
+  const [currentBids, setCurrentBids] = useState([]);
+
+  const [loads, setLoads] = useState([]);
+  const [shipments, setShipments] = useState([]);
   const [formData, setFormData] = useState({
     fullName: '',
     businessName: '',
@@ -34,6 +41,145 @@ export const AppProvider = ({ children }) => {
     recipientNumber: '+234 08012345678',
     fareOffer: '10000',
   });
+
+  const addLoad = (loadData) => {
+    const newLoad = {
+      id: Date.now(),
+      loadNumber: `#${Math.floor(Math.random() * 1000) + 100}`,
+      route: `${loadData.pickupAddress || formData.pickupAddress || 'Lagos'} → ${loadData.deliveryAddress || formData.deliveryAddress || 'Abuja'}`,
+      destination: loadData.deliveryAddress || formData.deliveryAddress || 'Abuja',
+      truckType: loadData.truckType || formData.truckType || 'Flatbed Trailer',
+      status: 'Available',
+      numberOfBids: Math.floor(Math.random() * 10),
+      weight: `${Math.floor(Math.random() * 10000) + 1000} kg`,
+      price: `₦${(Math.floor(Math.random() * 200000) + 50000).toLocaleString()}`,
+      pickupDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      deliveryDate: new Date(Date.now() + 259200000).toISOString().split('T')[0],
+      distance: `${Math.floor(Math.random() * 1000) + 100} km`,
+      cargoType: loadData.loadDescription || 'General Cargo',
+      time: new Date().toLocaleString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+      }),
+      truckType: loadData.truckType || formData.truckType || 'Truck',
+      numberOfBids: Math.floor(Math.random() * 20) + 1,
+      priceRange: `₦${parseInt(loadData.fareOffer || formData.fareOffer || '120000').toLocaleString()} - ₦${(parseInt(loadData.fareOffer || formData.fareOffer || '120000') + 30000).toLocaleString()}`,
+      status: 'In Transit',
+      description: loadData.loadDescription || formData.loadDescription || 'General cargo transport',
+      createdAt: new Date().toISOString(),
+      ...loadData
+    };
+    
+    setLoads(prevLoads => [newLoad, ...prevLoads]);
+    return newLoad;
+  };
+
+  const updateLoad = (loadId, updates) => {
+    setLoads(prevLoads => 
+      prevLoads.map(load => 
+        load.id === loadId ? { ...load, ...updates } : load
+      )
+    );
+  };
+
+  const deleteLoad = (loadId) => {
+    setLoads(prevLoads => prevLoads.filter(load => load.id !== loadId));
+  };
+
+  const addShipment = (shipmentData) => {
+    const newShipment = {
+      id: Date.now(),
+      address: shipmentData.deliveryAddress || formData.deliveryAddress || '35 Hakeem Dickson Street, Lekki Phase 1...',
+      date: new Date().toLocaleDateString('en-GB', { 
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric'
+      }) + ' ' + new Date().toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      }),
+      price: `NGN ${parseInt(shipmentData.fareOffer || formData.fareOffer || '12500').toLocaleString()}`,
+      status: 'Delivered',
+      createdAt: new Date().toISOString(),
+      ...shipmentData
+    };
+    
+    setShipments(prevShipments => [newShipment, ...prevShipments]);
+    return newShipment;
+  };
+
+  const updateShipment = (shipmentId, updates) => {
+    setShipments(prevShipments => 
+      prevShipments.map(shipment => 
+        shipment.id === shipmentId ? { ...shipment, ...updates } : shipment
+      )
+    );
+  };
+
+  const deleteShipment = (shipmentId) => {
+    setShipments(prevShipments => prevShipments.filter(shipment => shipment.id !== shipmentId));
+  };
+
+  useEffect(() => {
+    if (shipments.length === 0) {
+      const sampleShipments = [
+        {
+          id: 1,
+          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
+          date: '10/07/2025 12:58 PM',
+          price: 'NGN 12,500',
+          status: 'Delivered'
+        },
+        {
+          id: 2,
+          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
+          date: '10/07/2025 12:58 PM',
+          price: 'NGN 12,500',
+          status: 'Delivered'
+        },
+        {
+          id: 3,
+          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
+          date: '10/07/2025 12:58 PM',
+          price: 'NGN 12,500',
+          status: 'Delivered'
+        },
+        {
+          id: 4,
+          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
+          date: '10/07/2025 12:58 PM',
+          price: 'NGN 12,500',
+          status: 'Delivered'
+        },
+        {
+          id: 5,
+          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
+          date: '10/07/2025 12:58 PM',
+          price: 'NGN 12,500',
+          status: 'Delivered'
+        },
+        {
+          id: 6,
+          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
+          date: '10/07/2025 12:58 PM',
+          price: 'NGN 12,500',
+          status: 'Delivered'
+        },
+        {
+          id: 7,
+          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
+          date: '10/07/2025 12:58 PM',
+          price: 'NGN 12,500',
+          status: 'Delivered'
+        }
+      ];
+      setShipments(sampleShipments);
+    }
+  }, []);
 
   const onboardingSteps = [
     {
@@ -126,11 +272,29 @@ export const AppProvider = ({ children }) => {
     setShowSuccessModal,
     alertResolved,
     setAlertResolved,
+    showLoadDrawer,
+    setShowLoadDrawer,
+    selectedLoad,
+    setSelectedLoad,
     formData,
     setFormData,
+    loads,
+    setLoads,
+    addLoad,
+    updateLoad,
+    deleteLoad,
+    shipments,
+    setShipments,
+    addShipment,
+    updateShipment,
+    deleteShipment,
     onboardingSteps,
     truckTypes,
     drivers,
+    showBidsModal,
+    setShowBidsModal,
+    currentBids,
+    setCurrentBids,
   };
 
   return (

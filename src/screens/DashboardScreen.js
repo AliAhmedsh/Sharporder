@@ -12,17 +12,36 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
+  Image,
+  Animated,
+  Easing,
+  Modal,
 } from 'react-native';
-import ActionSheet from 'react-native-actions-sheet';
+
 import MapView from 'react-native-maps';
 import DeliveryDetailsScreen from './DeliveryDetailsScreen';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import hamburger from '../assets/hamburger.png';
+import headset from '../assets/headset.png';
+import help from '../assets/help.png';
+import payments from '../assets/payments.png';
+import shipments from '../assets/shipments.png';
+import loadboard from '../assets/loadboard.png';
 
-const BookingSearch = ({ query, setQuery, searchLocation }) => {
+const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSuggestionPress }) => {
+  const suggestions = ['Home', 'Office', 'Warehouse', 'Airport', 'Mall', 'Harbor', 'Central Park'];
+  const filtered = query
+    ? suggestions.filter(s => s.toLowerCase().includes(query.toLowerCase()))
+    : suggestions.slice(0, 4);
   return (
     <View>
       <Text style={styles.bookingTitle}>Book your delivery</Text>
-      <View style={styles.searchContainer}>
+      <TouchableOpacity 
+        style={styles.searchContainer}
+        onPress={onFocusSearch}
+        activeOpacity={0.7}
+      >
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
@@ -31,20 +50,87 @@ const BookingSearch = ({ query, setQuery, searchLocation }) => {
           onChangeText={setQuery}
           onSubmitEditing={searchLocation}
           returnKeyType="search"
+          onFocus={onFocusSearch}
+          blurOnSubmit={false}
         />
-      </View>
+      </TouchableOpacity>
+      <ScrollView style={styles.suggestionsContainer} contentContainerStyle={styles.suggestionsContent}>
+        {filtered.map(item => (
+          <TouchableOpacity
+            key={item}
+            style={styles.suggestionItem}
+            activeOpacity={0.7}
+            onPress={() => onSuggestionPress?.(item)}
+          >
+            <Text style={styles.suggestionText}>{item}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 };
 
-const { height } = Dimensions.get('window');
+const { height, width: screenWidth } = Dimensions.get('window');
 
-const DashboardScreen = () => {
-  const actionSheetRef = useRef(null);
+const DashboardScreen = ({ navigation }) => {
+  const bottomSheetHeight = Math.round(height * 0.8);
+  const PEEK_HEIGHT = 200;
+  const bottomSheetTranslateY = useRef(new Animated.Value(bottomSheetHeight - PEEK_HEIGHT)).current;
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showSidePanel, setShowSidePanel] = useState(false);
+  const DRAWER_WIDTH = Math.round(screenWidth * 0.75);
+  const drawerTranslateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    actionSheetRef?.current?.show();
-  }, []);
+    bottomSheetTranslateY.setValue(bottomSheetHeight - PEEK_HEIGHT);
+    setIsSheetOpen(false);
+  }, [bottomSheetHeight]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      const kh = e?.endCoordinates?.height || 0;
+      setKeyboardHeight(kh);
+      
+      if (!isSheetOpen) {
+        openBookingSheet();
+      }
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [isSheetOpen]);
+
+  const openBookingSheet = () => {
+    if (isSheetOpen) return;
+    
+    Animated.timing(bottomSheetTranslateY, {
+      toValue: 0,
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setIsSheetOpen(true));
+  };
+
+  const handleSuggestionPress = (item) => {
+    setQuery(item);
+    searchLocation();
+    navigation?.navigate && navigation.navigate('DeliveryDetails');
+  };
+
+  const closeBookingSheet = () => {
+    Animated.timing(bottomSheetTranslateY, {
+      toValue: bottomSheetHeight - PEEK_HEIGHT,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setIsSheetOpen(false));
+  };
 
   const [region, setRegion] = useState({
     latitude: 6.5244,
@@ -127,9 +213,40 @@ const DashboardScreen = () => {
         }
       });
   };
+
+  const openSidePanel = () => {
+    setShowSidePanel(true);
+    
+    Animated.parallel([
+      Animated.timing(drawerTranslateX, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      })
+    ]).start();
+  };
+
+  const closeSidePanel = () => {
+    overlayOpacity.setValue(0);
+    
+    Animated.timing(drawerTranslateX, {
+      toValue: -DRAWER_WIDTH,
+      duration: 200,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setShowSidePanel(false));
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
@@ -139,43 +256,146 @@ const DashboardScreen = () => {
           showsUserLocation={true}
           showsMyLocationButton={true}
         ></MapView>
-
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <ActionSheet
-            ref={actionSheetRef}
-            gestureEnabled={false}
-            closeOnTouchBackdrop={false}
-            containerStyle={{
-              backgroundColor: 'white',
-              maxHeight: height * 0.8,
-            }}
-            overlayColor="red"
-            defaultOverlayOpacity={0}
-            bounceOnOpen={true}
-            indicatorStyle={{ backgroundColor: '#ccc' }}
-            closable={false}
-            openAnimationConfig={{ spring: { speed: 14, bounciness: 4 } }}
-            keyboardHandlerEnabled={true}
-            keyboardAvoidingBehavior="padding" // or "height"
+        {isSheetOpen && (
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={closeBookingSheet}
+            style={[styles.sheetOverlay, { bottom: bottomSheetHeight - keyboardHeight }]}
+          />
+        )}
+        <Animated.View
+          style={[
+            styles.bottomSheet,
+            { height: bottomSheetHeight, bottom: -keyboardHeight, transform: [{ translateY: bottomSheetTranslateY }] },
+          ]}
+        >
+          <View style={styles.sheetHandle} />
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, padding: 16 }}
+            style={styles.bookingCard}
+            keyboardShouldPersistTaps="always"
           >
-            <ScrollView
-              contentContainerStyle={{ flexGrow: 1, padding: 16 }}
-              style={styles.bookingCard}
-              keyboardShouldPersistTaps="handled"
-            >
-              {step === 0 ? (
-                <BookingSearch
-                  query={query}
-                  setQuery={setQuery}
-                  searchLocation={searchLocation}
-                />
-              ) : step === 1 ? (
-                <DeliveryDetailsScreen />
-              ) : null}
-            </ScrollView>
-          </ActionSheet>
-        </View>
+            {step === 0 ? (
+              <BookingSearch
+                query={query}
+                setQuery={setQuery}
+                searchLocation={searchLocation}
+                onFocusSearch={openBookingSheet}
+                onSuggestionPress={handleSuggestionPress}
+              />
+            ) : step === 1 ? (
+              <DeliveryDetailsScreen />
+            ) : null}
+          </ScrollView>
+        </Animated.View>
       </View>
+
+      {showSidePanel && (
+        <Animated.View
+          style={[
+            styles.overlay, 
+            { 
+              left: DRAWER_WIDTH,
+              opacity: overlayOpacity 
+            }
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={closeSidePanel}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
+      )}
+      <Animated.View
+        pointerEvents={showSidePanel ? 'auto' : 'none'}
+        style={[
+          styles.drawerContainer,
+          {
+            width: DRAWER_WIDTH,
+            transform: [{ translateX: drawerTranslateX }],
+          },
+        ]}
+      >
+        <ScrollView contentContainerStyle={{ paddingTop: 60 }}>
+        <View style={styles.drawerProfile}>
+            <View style={styles.drawerAvatar}><Text style={styles.drawerAvatarText}>VV</Text></View>
+            <View style={styles.drawerInfo}>
+              <Text style={styles.drawerBusinessName}>Vonsmallhousen Ventures</Text>
+              <View style={styles.drawerRating}>
+                <Text style={styles.drawerStar}>⭐</Text>
+                <Text style={styles.drawerRatingText}>4.89</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.drawerMenu}>
+            {[
+              { 
+                id: 'payments', 
+                title: 'Payments', 
+                icon: payments,
+                onPress: closeSidePanel
+              },
+              { 
+                id: 'shipments', 
+                title: 'My shipments', 
+                icon: shipments,
+                onPress: () => {
+                  closeSidePanel();
+                  navigation.navigate('MyShipments');
+                }
+              },
+              { 
+                id: 'loadboard', 
+                title: 'Load board', 
+                icon: loadboard,
+                onPress: () => {
+                  closeSidePanel();
+                  navigation.navigate('LoadBoard');
+                }
+              },
+              { 
+                id: 'support', 
+                title: 'Support', 
+                icon: headset,
+                onPress: closeSidePanel
+              },
+              { 
+                id: 'about', 
+                title: 'About', 
+                icon: help,
+                onPress: closeSidePanel
+              },
+            ].map((item, idx, arr) => (
+              <View key={item.id}>
+                <TouchableOpacity
+                  style={styles.drawerItem}
+                  activeOpacity={0.7}
+                  onPress={item.onPress}
+                >
+                  <Image style={styles.drawerItemIcon} source={item.icon} />
+                  <Text style={styles.drawerItemText}>{item.title}</Text>
+                </TouchableOpacity>
+                {idx < arr.length - 1 && <View style={styles.drawerSeparator} />}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </Animated.View>
+
+      {!showSidePanel && (
+        <TouchableOpacity
+          style={styles.hamburgerButton}
+          onPress={openSidePanel}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <View style={styles.hamburgerButtonContainer}>
+            <Image source={hamburger} style={styles.hamburgerIcon} />
+          </View>
+        </TouchableOpacity>
+      )}
+
     </SafeAreaView>
   );
 };
@@ -203,6 +423,170 @@ const styles = StyleSheet.create({
   },
   searchIcon: { fontSize: 20, marginRight: 10, color: '#999999' },
   searchInput: { flex: 1, fontSize: 16, color: '#333333' },
+  hamburgerButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 20,
+    left: 20,
+    zIndex: 30000,
+    elevation: 20,
+  },
+  hamburgerButtonContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 20,
+  },
+  hamburgerIcon: {
+    width: 52,
+    height: 52,
+    resizeMode: 'contain',
+  },
+  hamburgerModalWrapper: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 60,
+    left: 20,
+    width: 64,
+    height: 64,
+    zIndex: 30000,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 20000,
+  },
+  drawerContainer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 300,
+    backgroundColor: '#FFFFFF',
+    zIndex: 25000,
+    elevation: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  drawerProfile: {
+    flexDirection: 'row',        
+    alignItems: 'center',        
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  drawerAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#8B5A9F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  drawerAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  drawerInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  drawerBusinessName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  drawerMenu: {
+    paddingTop: 20,
+  },
+  drawerItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  drawerItemIcon: {
+    marginRight: 16,
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+  },
+  drawerItemText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  drawerSeparator: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginLeft: 60,
+    marginRight: 20,
+  },
+  suggestionsContainer: {
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  suggestionText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  drawerRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  drawerStar: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  drawerRatingText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    zIndex: 5000,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+  },
+  sheetOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+    zIndex: 4000,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CCC',
+    alignSelf: 'center',
+    marginVertical: 8,
+  },
 });
 
 export default DashboardScreen;

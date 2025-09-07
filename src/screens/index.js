@@ -8,3 +8,5 @@ export { default as TripDetailsScreen } from './TripDetailsScreen';
 export { default as DriverSearchScreen } from './DriverSearchScreen';
 export { default as DriverFoundScreen } from './DriverFoundScreen';
 export { default as DeliveryCompleteScreen } from './DeliveryCompleteScreen';
+export { default as LoadBoardScreen } from './LoadBoardScreen';
+export { default as MyShipmentsScreen } from './MyShipmentsScreen';

@@ -14,6 +14,8 @@ import {
   DriverSearchScreen,
   DriverFoundScreen,
   DeliveryCompleteScreen,
+  LoadBoardScreen,
+  MyShipmentsScreen,
 } from '../screens';
 
 const Stack = createNativeStackNavigator();
@@ -39,10 +41,9 @@ const AppNavigator = () => {
         <Stack.Screen name="TripDetails" component={TripDetailsScreen} />
         <Stack.Screen name="DriverSearch" component={DriverSearchScreen} />
         <Stack.Screen name="DriverFound" component={DriverFoundScreen} />
-        <Stack.Screen
-          name="DeliveryComplete"
-          component={DeliveryCompleteScreen}
-        />
+        <Stack.Screen name="DeliveryComplete" component={DeliveryCompleteScreen} />
+        <Stack.Screen name="LoadBoard" component={LoadBoardScreen} />
+        <Stack.Screen name="MyShipments" component={MyShipmentsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
