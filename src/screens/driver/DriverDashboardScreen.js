@@ -8,10 +8,12 @@ import {
   ScrollView,
   Dimensions,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Image,
   Animated,
   Easing,
   Platform,
+  Modal,
 } from 'react-native';
 
 import MapView from 'react-native-maps';
@@ -106,6 +108,61 @@ const LoadCard = ({ load }) => {
   );
 };
 
+const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPress }) => {
+  return (
+    <View style={styles.onlineLoadCard}>
+      <View style={styles.onlineLoadContent}>
+        <View style={styles.onlineLoadHeader}>
+          <Image 
+            source={{ uri: 'https://via.placeholder.com/40' }} 
+            style={styles.onlineCustomerAvatar} 
+          />
+          <View style={styles.onlineLoadInfo}>
+            <View style={styles.onlineNameRow}>
+              <Text style={styles.onlineCustomerName}>Kunle Alamu</Text>
+              <View style={styles.onlineRating}>
+                <Text style={styles.onlineStar}>⭐</Text>
+                <Text style={styles.onlineRatingText}>4.5</Text>
+              </View>
+            </View>
+            <Text style={styles.onlineTime}>10 mins away</Text>
+            <Text style={styles.onlineCapacity}>Load capacity: 10-30 cubic yards</Text>
+          </View>
+        </View>
+        
+        <View style={styles.onlineLocations}>
+          <View style={styles.onlineLocationItem}>
+            <View style={styles.greenDot} />
+            <Text style={styles.onlineLocationText}>15 Bode Thomas Street, Surulere, Lagos</Text>
+          </View>
+          <View style={styles.onlineLocationItem}>
+            <View style={styles.purpleDot} />
+            <Text style={styles.onlineLocationText}>35 Hakeem Dickson Street, Lekki Phase 1...</Text>
+          </View>
+        </View>
+        
+        <Text style={styles.onlinePrice}>NGN 15,000</Text>
+      </View>
+      
+      {showActions ? (
+        <View style={styles.onlineActions}>
+          <TouchableOpacity style={styles.acceptButton} onPress={onAccept}>
+            <Text style={styles.acceptText}>ACCEPT</Text>
+          </TouchableOpacity>
+          <View style={styles.actionDivider} />
+          <TouchableOpacity style={styles.denyButton} onPress={onDeny}>
+            <Text style={styles.denyText}>DENY</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.onlineArrowButton} onPress={onArrowPress}>
+          <Text style={styles.onlineArrow}>›</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
+
 const { height, width: screenWidth } = Dimensions.get('window');
 
 const DriverDashboardScreen = ({ navigation }) => {
@@ -115,17 +172,49 @@ const DriverDashboardScreen = ({ navigation }) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
+  const [activeLoadIndex, setActiveLoadIndex] = useState(null); // Track which load shows actions
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [selectedLoad, setSelectedLoad] = useState(null);
   const DRAWER_WIDTH = Math.round(screenWidth * 0.75);
   const drawerTranslateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
+
+  // Sample loads data
+  const [availableLoads, setAvailableLoads] = useState([
+    { id: 1, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
+    { id: 2, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
+    { id: 3, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
+    { id: 4, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
+    { id: 5, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
+  ]);
 
   useEffect(() => {
     bottomSheetTranslateY.setValue(bottomSheetHeight - PEEK_HEIGHT);
     setIsSheetOpen(false);
   }, [bottomSheetHeight]);
 
+  useEffect(() => {
+    // When going online, hide the bottom sheet completely
+    if (isOnline) {
+      Animated.timing(bottomSheetTranslateY, {
+        toValue: bottomSheetHeight,
+        duration: 250,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // When going offline, show the bottom sheet at peek height
+      Animated.timing(bottomSheetTranslateY, {
+        toValue: bottomSheetHeight - PEEK_HEIGHT,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isOnline]);
+
   const openBottomSheet = () => {
-    if (isSheetOpen) return;
+    if (isSheetOpen || isOnline) return;
     
     Animated.timing(bottomSheetTranslateY, {
       toValue: 0,
@@ -184,6 +273,27 @@ const DriverDashboardScreen = ({ navigation }) => {
 
   const toggleOnlineStatus = () => {
     setIsOnline(!isOnline);
+    setActiveLoadIndex(null); // Reset active load when toggling status
+    setShowAcceptModal(false);
+  };
+
+  const handleAcceptLoad = (loadId) => {
+    console.log('Accepted load:', loadId);
+    setActiveLoadIndex(null); // Hide actions after accept
+    const load = availableLoads.find(l => l.id === loadId) || null;
+    setSelectedLoad(load);
+    setShowAcceptModal(true); // Show confirmation modal and hide cards
+  };
+
+  const handleDenyLoad = (loadId) => {
+    console.log('Denied load:', loadId);
+    setActiveLoadIndex(null); // Hide actions after deny
+    // Handle deny logic here
+  };
+
+  const handleArrowPress = (loadId, index) => {
+    // Toggle the actions for this specific load
+    setActiveLoadIndex(activeLoadIndex === index ? null : index);
   };
 
   const sampleLoad = {
@@ -227,7 +337,28 @@ const DriverDashboardScreen = ({ navigation }) => {
           showsMyLocationButton={true}
         />
         
-        {isSheetOpen && (
+        {/* Online Load Cards - Show when driver is online */}
+        {isOnline && !showAcceptModal && (
+          <ScrollView 
+            style={styles.onlineLoadsContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.onlineLoadsContent}
+          >
+            {availableLoads.map((load, index) => (
+              <OnlineLoadCard
+                key={load.id}
+                load={load}
+                showActions={index === activeLoadIndex}
+                onAccept={() => handleAcceptLoad(load.id)}
+                onDeny={() => handleDenyLoad(load.id)}
+                onArrowPress={() => handleArrowPress(load.id, index)}
+              />
+            ))}
+          </ScrollView>
+        )}
+        
+        {/* Bottom Sheet - Hidden when online */}
+        {!isOnline && isSheetOpen && (
           <TouchableOpacity
             activeOpacity={1}
             onPress={closeBottomSheet}
@@ -243,6 +374,7 @@ const DriverDashboardScreen = ({ navigation }) => {
               transform: [{ translateY: bottomSheetTranslateY }] 
             },
           ]}
+          pointerEvents={isOnline ? 'none' : 'auto'}
         >
           <TouchableOpacity 
             style={styles.sheetHandle}
@@ -374,6 +506,87 @@ const DriverDashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
       )}
 
+      {/* Accept Offer Modal */}
+      <Modal
+        transparent
+        animationType="slide"
+        visible={showAcceptModal}
+        onRequestClose={() => setShowAcceptModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowAcceptModal(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeaderRow}>
+                <Image 
+                  source={{ uri: 'https://via.placeholder.com/40' }} 
+                  style={styles.onlineCustomerAvatar} 
+                />
+                <View style={{ flex: 1 }}>
+                  <View style={styles.onlineNameRow}>
+                    <Text style={styles.onlineCustomerName}>{selectedLoad?.customer || 'Kunle Alamu'}</Text>
+                    <View style={styles.onlineRating}>
+                      <Text style={styles.onlineStar}>⭐</Text>
+                      <Text style={styles.onlineRatingText}>{(selectedLoad?.rating || 4.5).toString()}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.onlineTime}>{selectedLoad?.time || '10 mins away'}</Text>
+                  <Text style={styles.onlineCapacity}>Load capacity: 10-30 cubic yards</Text>
+                </View>
+              </View>
+
+              <View style={styles.onlineLocations}>
+                <View style={styles.onlineLocationItem}>
+                  <View style={styles.greenDot} />
+                  <Text style={styles.onlineLocationText}>15 Bode Thomas Street, Surulere, Lagos</Text>
+                </View>
+                <View style={styles.onlineLocationItem}>
+                  <View style={styles.purpleDot} />
+                  <Text style={styles.onlineLocationText}>35 Hakeem Dickson Street, Lekki Phase 1, Lagos</Text>
+                </View>
+              </View>
+
+              <Text style={styles.modalPrice}>NGN 15,000</Text>
+
+              <TouchableOpacity 
+              style={styles.modalAcceptButton} 
+              onPress={() => {
+                setShowAcceptModal(false);
+                navigation.navigate('DriverOnTheWay', { price: 'NGN 15,000', load: selectedLoad });
+              }}
+            >
+              <Text style={styles.modalAcceptText}>ACCEPT NGN 15,000</Text>
+            </TouchableOpacity>
+
+              <View style={styles.modalDivider} />
+              <Text style={styles.modalAltText}>Or select your preferred fare offer</Text>
+              <View style={styles.offerRow}>
+                {['NGN 15,500','NGN 16,000','NGN 17,000','NGN 18,000'].map(val => (
+                <TouchableOpacity 
+                  key={val} 
+                  style={styles.offerChip} 
+                  onPress={() => {
+                    setShowAcceptModal(false);
+                    navigation.navigate('DriverOnTheWay', { price: val, load: selectedLoad });
+                  }}
+                >
+                  <Text style={styles.offerChipText}>{val}</Text>
+                </TouchableOpacity>
+              ))}
+              </View>
+
+              <TouchableOpacity onPress={() => setShowAcceptModal(false)}>
+                <Text style={styles.modalCloseLink}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -424,11 +637,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 100,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    marginTop: 10,
     shadowOffset: { width: 0, height: 2 },
   },
   statsHeader: {
@@ -557,6 +771,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333333',
+    marginTop: 4,
   },
   viewDetailsButton: {
     backgroundColor: '#007AFF',
@@ -568,6 +783,177 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Online Load Card Styles - Updated to match the image
+  onlineLoadsContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    maxHeight: '70%',
+    zIndex: 999,
+  },
+  onlineLoadsContent: {
+    paddingHorizontal: 12,
+    paddingBottom: 16,
+    gap: 8, // Reduced gap between cards
+  },
+  onlineLoadCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    overflow: 'hidden',
+    marginBottom: 8,
+    marginHorizontal: 2,
+    position: 'relative',
+  },
+  onlineLoadContent: {
+    flex: 1,
+    padding: 12,
+  },
+  onlineLoadHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  onlineCustomerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  onlineLoadInfo: {
+    flex: 1,
+  },
+  onlineNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  onlineCustomerName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginRight: 6,
+  },
+  onlineRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  onlineStar: {
+    fontSize: 12,
+    marginRight: 1,
+    color: '#FFB800',
+  },
+  onlineRatingText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666666',
+  },
+  onlineTime: {
+    fontSize: 12,
+    color: '#888888',
+    marginBottom: 2,
+  },
+  onlineCapacity: {
+    fontSize: 11,
+    color: '#888888',
+  },
+  onlineLocations: {
+    marginBottom: 8,
+  },
+  onlineLocationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  greenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#00D084',
+    marginRight: 8,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  purpleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#8B5CF6',
+    marginRight: 8,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  onlineLocationText: {
+    fontSize: 12,
+    color: '#444444',
+    flex: 1,
+    lineHeight: 16,
+  },
+  onlinePrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginTop: 4,
+  },
+  onlineArrowButton: {
+    width: 36,
+    backgroundColor: '#00BFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: '#EEEEEE',
+  },
+  onlineArrow: {
+    fontSize: 20,
+    color: '#666666',
+    fontWeight: 'bold',
+  },
+  onlineActions: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    width: 150, // Fixed width for both buttons
+    zIndex: 2,
+  },
+  acceptButton: {
+    backgroundColor: '#00BFFF',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  acceptText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  actionDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  denyButton: {
+    backgroundColor: '#00BFFF',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  denyText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   hamburgerButton: {
     position: 'absolute',
@@ -593,6 +979,86 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     resizeMode: 'contain',
+  },
+  // Modal styles
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  modalHandle: {
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E5EA',
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  modalPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  modalAcceptButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  modalAcceptText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#EDEDED',
+    marginVertical: 12,
+  },
+  modalAltText: {
+    textAlign: 'center',
+    color: '#666666',
+    marginBottom: 10,
+  },
+  offerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  offerChip: {
+    borderWidth: 1,
+    borderColor: '#00BFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  offerChipText: {
+    color: '#00BFFF',
+    fontWeight: '700',
+  },
+  modalCloseLink: {
+    color: '#007AFF',
+    textAlign: 'center',
+    fontWeight: '700',
+    marginBottom: Platform.OS === 'ios' ? 24 : 12,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

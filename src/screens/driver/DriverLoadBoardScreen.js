@@ -16,6 +16,9 @@ import {
 } from 'react-native';
 import back from '../../assets/icons/back.png';
 import emptyloadboard2 from '../../assets/empty-load-board-2.png';
+import search from '../../assets/icons/search.png';
+import filter from '../../assets/icons/filter.png';
+import menu from '../../assets/icons/menu.png';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -249,8 +252,12 @@ const DriverLoadBoardScreen = ({ navigation }) => {
         onRequestClose={() => setShowDetailsModal(false)}
         statusBarTranslucent
       >
-        <View style={styles.detailsModalOverlay}>
-          <View style={styles.detailsModalWrapper}>
+        <TouchableOpacity 
+          style={styles.modalBackdrop} 
+          activeOpacity={1} 
+          onPress={() => setShowDetailsModal(false)}
+        >
+          <View style={styles.detailsModalWrapper} onStartShouldSetResponder={() => true}>
             <Animated.View 
               style={[
                 styles.detailsModalContent,
@@ -370,7 +377,7 @@ const DriverLoadBoardScreen = ({ navigation }) => {
               </KeyboardAvoidingView>
             </Animated.View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     );
   };
@@ -385,6 +392,13 @@ const DriverLoadBoardScreen = ({ navigation }) => {
     const applyFilters = () => {
       setFilters(tempFilters);
       setShowFilterModal(false);
+    };
+
+    const handleBackdropPress = (e) => {
+      // Only close if the press is on the backdrop, not on the modal content
+      if (e.target === e.currentTarget) {
+        setShowFilterModal(false);
+      }
     };
 
     const clearTempFilters = () => {
@@ -406,13 +420,10 @@ const DriverLoadBoardScreen = ({ navigation }) => {
         onRequestClose={() => setShowFilterModal(false)}
       >
         <TouchableOpacity 
-          style={styles.modalOverlay}
+          style={styles.filterModalOverlay} 
           activeOpacity={1}
-          onPress={() => {
-            setTempFilters(filters);
-            setShowFilterModal(false);
-          }}
-        >
+          onPress={handleBackdropPress}
+        > 
           <TouchableOpacity 
             style={styles.modalContent}
             activeOpacity={1}
@@ -575,7 +586,7 @@ const DriverLoadBoardScreen = ({ navigation }) => {
       
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Image source={search} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search Load Board"
@@ -589,11 +600,11 @@ const DriverLoadBoardScreen = ({ navigation }) => {
           onPress={() => setShowFilterModal(true)}
           activeOpacity={0.8}
         >
-          <Text style={[styles.filterIcon, hasActiveFilters && styles.filterIconActive]}>⚙</Text>
+          <Image source={filter} style={styles.filterIcon} />
           {hasActiveFilters && <View style={styles.filterBadge} />}
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuButton} activeOpacity={0.8}>
-          <Text style={styles.menuIcon}>☰</Text>
+          <Image source={menu} style={styles.menuIcon} />
         </TouchableOpacity>
       </View>
       
@@ -653,7 +664,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'start',
   },
   headerSpacer: {
     width: 36,
@@ -680,9 +691,10 @@ const styles = StyleSheet.create({
     borderColor: '#E8E8E8',
   },
   searchIcon: {
-    fontSize: 18,
-    marginRight: 10,
-    color: '#666',
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    tintColor: '#666',
   },
   searchInput: {
     flex: 1,
@@ -706,8 +718,10 @@ const styles = StyleSheet.create({
     borderColor: '#007AFF',
   },
   filterIcon: {
-    fontSize: 20,
-    color: '#333',
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    tintColor: '#333',
   },
   filterIconActive: {
     color: '#FFF',
@@ -732,8 +746,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuIcon: {
-    fontSize: 18,
-    color: '#333',
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    tintColor: '#333',
   },
   scrollView: {
     flex: 1,
@@ -853,8 +869,8 @@ const styles = StyleSheet.create({
   },
   viewDetailsButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 24,
   },
   viewDetailsText: {
@@ -893,10 +909,11 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   // Filter Modal Styles
-  modalOverlay: {
+  filterModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+    position: 'relative',
   },
   modalContent: {
     backgroundColor: '#FFF',
@@ -1014,14 +1031,22 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   // Details Modal Styles
-  detailsModalOverlay: {
+  modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  detailsModalOverlay: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   detailsModalWrapper: {
     height: '80%',
     width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   detailsModalContent: {
     flex: 1,

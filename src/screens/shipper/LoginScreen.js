@@ -24,7 +24,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleSignUp = () => {
-    navigation.navigate('SignUp');
+    navigation.navigate('RoleSelection');
   };
 
   return (
@@ -114,12 +114,12 @@ const styles = StyleSheet.create({
   },
   loginLogoContainer: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 30,
+    marginTop: 20,
+    marginBottom: 0,
   },
   logoImage: {
-    width: 150,
-    height: 150,
+    width: 220,
+    height: 220,
     resizeMode: 'contain',
   },
   formSection: {
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
   //   fontWeight: '600',
   //   letterSpacing: 0.5,
   // },
+  
 });
 
 export default LoginScreen;

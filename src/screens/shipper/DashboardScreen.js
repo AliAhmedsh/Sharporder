@@ -28,6 +28,7 @@ import help from '../../assets/icons/help.png';
 import payments from '../../assets/icons/payments.png';
 import shipments from '../../assets/icons/shipments.png';
 import loadboard from '../../assets/icons/loadboard.png';
+import search from '../../assets/icons/search.png';
 
 const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSuggestionPress }) => {
   const suggestions = ['Home', 'Office', 'Warehouse', 'Airport', 'Mall', 'Harbor', 'Central Park'];
@@ -42,7 +43,7 @@ const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSugge
         onPress={onFocusSearch}
         activeOpacity={0.7}
       >
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Image source={search} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Who are we delivering to?"
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#F8F8F8',
   },
-  searchIcon: { fontSize: 20, marginRight: 10, color: '#999999' },
+  searchIcon: { width: 20, height: 20, marginRight: 10, color: '#999999' },
   searchInput: { flex: 1, fontSize: 16, color: '#333333' },
   hamburgerButton: {
     position: 'absolute',

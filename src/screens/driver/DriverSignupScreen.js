@@ -112,7 +112,7 @@ const DriverSignupScreen = ({ navigation }) => {
               onChangeText={(value) => handleInputChange('dateOfBirth', value)}
             />
             <TouchableOpacity style={styles.iconButton}>
-              <Image source={calender} style={styles.inputIconImage} />
+              <Image source={calender} style={styles.inputCalenderImage} />
             </TouchableOpacity>
           </View>
         </View>
@@ -269,6 +269,7 @@ const DriverSignupScreen = ({ navigation }) => {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
+          <View style={styles.modalHandle} />
           <Text style={styles.modalTitle}>Verification in Progress</Text>
           <Text style={styles.modalText}>
             Thank you for submitting your documents. Our team will review them and reach-out within 
@@ -387,8 +388,13 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   inputIconImage: {
-    width: 32,
-    height: 23,
+    width: 30,
+    height: 20,
+    tintColor: '#007AFF',
+  },
+  inputCalenderImage: {
+    width: 24,
+    height: 24,
     tintColor: '#007AFF',
   },
   phoneInputContainer: {
@@ -515,10 +521,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 30,
-    paddingTop: 40,
+    paddingTop: 16,
     paddingBottom: 30,
     alignItems: 'center',
     minHeight: 300,
+  },
+  modalHandle: {
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E5EA',
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 24,

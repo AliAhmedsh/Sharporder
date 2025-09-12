@@ -20,6 +20,8 @@ import {
   DriverSignupScreen,
   DriverDashboardScreen,
   DriverLoadBoardScreen,
+  DriverOnTheWayScreen,
+  DriverDeliveryCompleteScreen,
 } from '../screens';
 
 const Stack = createNativeStackNavigator();
@@ -52,6 +54,8 @@ const AppNavigator = () => {
         <Stack.Screen name="DriverSignup" component={DriverSignupScreen} />
         <Stack.Screen name="DriverDashboard" component={DriverDashboardScreen} />
         <Stack.Screen name="DriverLoadBoard" component={DriverLoadBoardScreen} />
+        <Stack.Screen name="DriverOnTheWay" component={DriverOnTheWayScreen} />
+        <Stack.Screen name="DriverDeliveryComplete" component={DriverDeliveryCompleteScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

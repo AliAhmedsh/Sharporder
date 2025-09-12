@@ -14,3 +14,5 @@ export { default as MyShipmentsScreen } from './shipper/MyShipmentsScreen';
 export { default as DriverSignupScreen } from './driver/DriverSignupScreen';
 export { default as DriverDashboardScreen } from './driver/DriverDashboardScreen';
 export { default as DriverLoadBoardScreen } from './driver/DriverLoadBoardScreen';
+export { default as DriverOnTheWayScreen } from './driver/DriverOnTheWayScreen';
+export { default as DriverDeliveryCompleteScreen } from './driver/DriverDeliveryCompleteScreen';

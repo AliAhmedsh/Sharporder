@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput,
 import { useAppContext } from '../../context/AppContext';
 import back from '../../assets/icons/back.png';
 import emptyStateImage from '../../assets/empty-load-board.png';
+import search from '../../assets/icons/search.png';
 
 const LoadBoardScreen = ({ navigation }) => {
   const { 
@@ -173,7 +174,7 @@ const LoadBoardScreen = ({ navigation }) => {
       
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Image source={search} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search Load Board"
@@ -268,7 +269,9 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   searchIcon: {
-    fontSize: 18,
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
     marginRight: 10,
     color: '#666',
   },

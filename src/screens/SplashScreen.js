@@ -30,9 +30,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoIcon: {
-    width: 200,
-    height: 200,
+    width: 250,
+    height: 250,
     marginBottom: 20,
+    resizeMode: 'contain',
   },
 });
 
