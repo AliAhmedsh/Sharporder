@@ -1,37 +1,92 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, SafeAreaView, StatusBar, Modal, Image } from 'react-native';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
+  Modal,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
 import { useAppContext } from '../../context/AppContext';
 import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
 
 const SignUpScreen = ({ navigation }) => {
-  const { 
-    formData, 
-    setFormData, 
-    showOTPModal, 
-    setShowOTPModal 
-  } = useAppContext();
+  const { formData, setFormData, showOTPModal, setShowOTPModal } =
+    useAppContext();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [otpValues, setOtpValues] = useState(['', '', '', '', '']);
+  const [loading, setLoading] = useState(false);
 
   const handleBack = () => {
     navigation.goBack();
+  };
+
+  const handleSignUp = async () => {
+    if (
+      !formData.email ||
+      !formData.password ||
+      !formData.businessName ||
+      !formData.phone
+    ) {
+      alert('Please fill all fields');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    setLoading(true);
+    try {
+      const userCredential = await auth().createUserWithEmailAndPassword(
+        formData.email,
+        formData.password,
+      );
+      const { uid, email } = userCredential.user;
+      // Add user data to Firestore
+      await firestore().collection('users').doc(uid).set({
+        businessName: formData.businessName,
+        email: email,
+        phone: formData.phone,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        role: 'shipper',
+      });
+      setShowOTPModal(true);
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        alert('That email address is already in use!');
+      } else if (error.code === 'auth/invalid-email') {
+        alert('That email address is invalid!');
+      } else {
+        alert(error.message);
+        console.log('error.message', error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOTPComplete = () => {
     navigation.navigate('Dashboard');
   };
 
-  const handleOTPNumber = (number) => {
+  const handleOTPNumber = number => {
     const currentIndex = otpValues.findIndex(val => val === '');
     if (currentIndex !== -1 && currentIndex < 5) {
       const newOtpValues = [...otpValues];
       newOtpValues[currentIndex] = number.toString();
       setOtpValues(newOtpValues);
-      
+
       // Auto complete when all 5 digits are entered
       if (currentIndex === 4) {
         setTimeout(() => {
@@ -43,7 +98,10 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   const handleOTPDelete = () => {
-    const lastFilledIndex = otpValues.map((val, index) => val !== '' ? index : -1).filter(index => index !== -1).pop();
+    const lastFilledIndex = otpValues
+      .map((val, index) => (val !== '' ? index : -1))
+      .filter(index => index !== -1)
+      .pop();
     if (lastFilledIndex !== undefined) {
       const newOtpValues = [...otpValues];
       newOtpValues[lastFilledIndex] = '';
@@ -59,14 +117,19 @@ const SignUpScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.formContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Image source={back} style={styles.backArrow} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Create your account</Text>
-            <Text style={styles.headerSubtitle}>Please provide accurate details to proceed</Text>
+            <Text style={styles.headerSubtitle}>
+              Please provide accurate details to proceed
+            </Text>
           </View>
         </View>
 
@@ -76,7 +139,9 @@ const SignUpScreen = ({ navigation }) => {
             style={styles.input}
             placeholder="Full name"
             value={formData.businessName}
-            onChangeText={(text) => setFormData({...formData, businessName: text})}
+            onChangeText={text =>
+              setFormData({ ...formData, businessName: text })
+            }
             placeholderTextColor="#C0C0C0"
           />
         </View>
@@ -87,7 +152,7 @@ const SignUpScreen = ({ navigation }) => {
             style={styles.input}
             placeholder="Email address"
             value={formData.email}
-            onChangeText={(text) => setFormData({...formData, email: text})}
+            onChangeText={text => setFormData({ ...formData, email: text })}
             keyboardType="email-address"
             placeholderTextColor="#C0C0C0"
           />
@@ -99,7 +164,7 @@ const SignUpScreen = ({ navigation }) => {
             style={styles.input}
             placeholder="+234 08012345678"
             value={formData.phone}
-            onChangeText={(text) => setFormData({...formData, phone: text})}
+            onChangeText={text => setFormData({ ...formData, phone: text })}
             keyboardType="phone-pad"
             placeholderTextColor="#C0C0C0"
           />
@@ -112,15 +177,17 @@ const SignUpScreen = ({ navigation }) => {
               style={styles.passwordInput}
               placeholder="Enter here"
               value={formData.password}
-              onChangeText={(text) => setFormData({...formData, password: text})}
+              onChangeText={text =>
+                setFormData({ ...formData, password: text })
+              }
               secureTextEntry={!showPassword}
               placeholderTextColor="#C0C0C0"
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeButton}
             >
-              <Image source={eye} style={styles.eyeIcon}/>
+              <Image source={eye} style={styles.eyeIcon} />
             </TouchableOpacity>
           </View>
         </View>
@@ -132,20 +199,22 @@ const SignUpScreen = ({ navigation }) => {
               style={styles.passwordInput}
               placeholder="Enter here"
               value={formData.confirmPassword}
-              onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
+              onChangeText={text =>
+                setFormData({ ...formData, confirmPassword: text })
+              }
               secureTextEntry={!showConfirmPassword}
               placeholderTextColor="#C0C0C0"
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               style={styles.eyeButton}
             >
-              <Image source={eye} style={styles.eyeIcon}/>
+              <Image source={eye} style={styles.eyeIcon} />
             </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.checkboxContainer}
           onPress={() => setIsChecked(!isChecked)}
         >
@@ -153,50 +222,60 @@ const SignUpScreen = ({ navigation }) => {
             {isChecked && <Text style={styles.checkmark}>✓</Text>}
           </View>
           <Text style={styles.checkboxText}>
-            I agree to the <Text style={styles.linkText}>Terms and Conditions</Text> and{' '}
+            I agree to the{' '}
+            <Text style={styles.linkText}>Terms and Conditions</Text> and{' '}
             <Text style={styles.linkText}>Privacy policy</Text> of this platform
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.fullWidthButton}
-          onPress={() => setShowOTPModal(true)}
+          onPress={handleSignUp}
+          disabled={loading}
         >
-          <Text style={styles.fullWidthButtonText}>CREATE ACCOUNT</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.fullWidthButtonText}>CREATE ACCOUNT</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
 
       {/* OTP Modal */}
+
       <Modal visible={showOTPModal} transparent animationType="slide">
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={closeOTPModal}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.otpModal}
             activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+            onPress={e => e.stopPropagation()}
           >
             <View style={styles.dragHandle} />
-            
+
             <Text style={styles.otpTitle}>OTP verification</Text>
             <Text style={styles.otpDescription}>
-              Enter the 5 digit code sent to your registered phone number below to verify your account.
+              Enter the 5 digit code sent to your registered phone number below
+              to verify your account.
             </Text>
-            
+
             <View style={styles.otpInputContainer}>
               {otpValues.map((value, index) => (
                 <View key={index} style={styles.otpInput}>
-                  {value !== '' && <Text style={styles.otpInputText}>{value}</Text>}
+                  {value !== '' && (
+                    <Text style={styles.otpInputText}>{value}</Text>
+                  )}
                 </View>
               ))}
             </View>
-            
+
             <View style={styles.keypadContainer}>
               {/* Row 1: 1, 2, 3 */}
               <View style={styles.keypadRow}>
-                {[1, 2, 3].map((number) => (
+                {[1, 2, 3].map(number => (
                   <TouchableOpacity
                     key={number}
                     style={styles.keypadButton}
@@ -206,10 +285,10 @@ const SignUpScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               {/* Row 2: 4, 5, 6 */}
               <View style={styles.keypadRow}>
-                {[4, 5, 6].map((number) => (
+                {[4, 5, 6].map(number => (
                   <TouchableOpacity
                     key={number}
                     style={styles.keypadButton}
@@ -219,10 +298,10 @@ const SignUpScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               {/* Row 3: 7, 8, 9 */}
               <View style={styles.keypadRow}>
-                {[7, 8, 9].map((number) => (
+                {[7, 8, 9].map(number => (
                   <TouchableOpacity
                     key={number}
                     style={styles.keypadButton}
@@ -232,7 +311,7 @@ const SignUpScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               {/* Row 4: 0, DELETE */}
               <View style={styles.keypadRow}>
                 <View style={styles.emptyKeypadSpace} />
@@ -242,7 +321,7 @@ const SignUpScreen = ({ navigation }) => {
                 >
                   <Text style={styles.keypadButtonText}>0</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={handleOTPDelete}
                 >
