@@ -2,14 +2,17 @@ import React from 'react';
 import { AppProvider } from './src/context/AppContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { LogBox } from 'react-native';
+import { AuthProvider } from './src/context/AuthContext';
 
 LogBox.ignoreAllLogs();
 
 const App = () => {
-  return (
-    <AppProvider>
-      <AppNavigator />
-    </AppProvider>
+  return ( 
+    <AuthProvider>
+      <AppProvider>
+        <AppNavigator />
+      </AppProvider>
+    </AuthProvider>
   );
 };
 

@@ -1,13 +1,8 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, StatusBar, Image } from 'react-native';
 
-const SplashScreen = ({ navigation }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [navigation]);
+const SplashScreen = () => {
+  // No navigation logic here, just render the splash screen UI
 
   return (
     <View style={styles.splashContainer}>

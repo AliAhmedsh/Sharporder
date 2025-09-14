@@ -1,64 +1,162 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, SafeAreaView, StatusBar, Modal, Image } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  TextInput, 
+  ScrollView, 
+  SafeAreaView, 
+  StatusBar, 
+  Image, 
+  Alert,
+  ActivityIndicator,
+  Modal 
+} from 'react-native';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
 
 const SignUpScreen = ({ navigation }) => {
-  const { 
-    formData, 
-    setFormData, 
-    showOTPModal, 
-    setShowOTPModal 
-  } = useAppContext();
+  const { formData, setFormData } = useAppContext();
+  const { signUp, loading } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [otpValues, setOtpValues] = useState(['', '', '', '', '']);
+  const [validationErrors, setValidationErrors] = useState({});
 
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleOTPComplete = () => {
-    navigation.navigate('Dashboard');
+  const validateForm = () => {
+    const errors = {};
+
+    // Business name validation
+    if (!formData.businessName.trim()) {
+      errors.businessName = 'Business name is required';
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Phone validation
+    if (!formData.phone.trim()) {
+      errors.phone = 'Phone number is required';
+    } else if (formData.phone.length < 10) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    // Terms and conditions validation
+    if (!isChecked) {
+      errors.terms = 'Please agree to the terms and conditions';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const handleOTPNumber = (number) => {
-    const currentIndex = otpValues.findIndex(val => val === '');
-    if (currentIndex !== -1 && currentIndex < 5) {
-      const newOtpValues = [...otpValues];
-      newOtpValues[currentIndex] = number.toString();
-      setOtpValues(newOtpValues);
-      
-      // Auto complete when all 5 digits are entered
-      if (currentIndex === 4) {
-        setTimeout(() => {
-          setShowOTPModal(false);
-          handleOTPComplete();
-        }, 500);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+
+  const handleSignUp = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      const userData = {
+        businessName: formData.businessName.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        status: 'pending_verification',
+        profileComplete: false,
+        userType: 'shipper',
+        createdAt: new Date().toISOString(),
+      };
+
+      const result = await signUp(
+        formData.email.trim(),
+        formData.password,
+        userData,
+        'shipper'
+      );
+
+      if (result && result.success) {
+        // Reset form data
+        setFormData({
+          businessName: '',
+          email: '',
+          phone: '',
+          password: '',
+          confirmPassword: '',
+        });
+        
+        // Show verification modal
+        setShowVerificationModal(true);
+        
+        // The AuthContext will handle the navigation after successful signup
+      } else {
+        const errorMessage = result?.error || 'Failed to create account. Please try again.';
+        Alert.alert('Sign Up Failed', errorMessage);
       }
+    } catch (error) {
+      console.error('Sign up error:', error);
+      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
+      Alert.alert('Error', errorMessage);
     }
   };
 
-  const handleOTPDelete = () => {
-    const lastFilledIndex = otpValues.map((val, index) => val !== '' ? index : -1).filter(index => index !== -1).pop();
-    if (lastFilledIndex !== undefined) {
-      const newOtpValues = [...otpValues];
-      newOtpValues[lastFilledIndex] = '';
-      setOtpValues(newOtpValues);
+  const renderInputError = (fieldName) => {
+    if (validationErrors[fieldName]) {
+      return (
+        <Text style={styles.errorText}>{validationErrors[fieldName]}</Text>
+      );
     }
-  };
-
-  const closeOTPModal = () => {
-    setShowOTPModal(false);
-    setOtpValues(['', '', '', '', '']);
+    return null;
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      
+      {/* Verification Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showVerificationModal}
+        onRequestClose={() => setShowVerificationModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Account Created Successfully!</Text>
+            <Text style={styles.modalText}>
+              Your account has been created. You'll be redirected to the dashboard shortly.
+            </Text>
+          </View>
+        </View>
+      </Modal>
+      
       <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -73,83 +171,148 @@ const SignUpScreen = ({ navigation }) => {
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Business name</Text>
           <TextInput
-            style={styles.input}
-            placeholder="Full name"
+            style={[
+              styles.input,
+              validationErrors.businessName && styles.inputError
+            ]}
+            placeholder="Business name"
             value={formData.businessName}
-            onChangeText={(text) => setFormData({...formData, businessName: text})}
+            onChangeText={(text) => {
+              setFormData({...formData, businessName: text});
+              if (validationErrors.businessName) {
+                setValidationErrors({...validationErrors, businessName: null});
+              }
+            }}
             placeholderTextColor="#C0C0C0"
+            editable={!loading}
           />
+          {renderInputError('businessName')}
         </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Email address</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              validationErrors.email && styles.inputError
+            ]}
             placeholder="Email address"
             value={formData.email}
-            onChangeText={(text) => setFormData({...formData, email: text})}
+            onChangeText={(text) => {
+              setFormData({...formData, email: text});
+              if (validationErrors.email) {
+                setValidationErrors({...validationErrors, email: null});
+              }
+            }}
             keyboardType="email-address"
+            autoCapitalize="none"
             placeholderTextColor="#C0C0C0"
+            editable={!loading}
           />
+          {renderInputError('email')}
         </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Phone number</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              validationErrors.phone && styles.inputError
+            ]}
             placeholder="+234 08012345678"
             value={formData.phone}
-            onChangeText={(text) => setFormData({...formData, phone: text})}
+            onChangeText={(text) => {
+              setFormData({...formData, phone: text});
+              if (validationErrors.phone) {
+                setValidationErrors({...validationErrors, phone: null});
+              }
+            }}
             keyboardType="phone-pad"
             placeholderTextColor="#C0C0C0"
+            editable={!loading}
           />
+          {renderInputError('phone')}
         </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Password</Text>
-          <View style={styles.passwordContainer}>
+          <View style={[
+            styles.passwordContainer,
+            validationErrors.password && styles.inputError
+          ]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter here"
               value={formData.password}
-              onChangeText={(text) => setFormData({...formData, password: text})}
+              onChangeText={(text) => {
+                setFormData({...formData, password: text});
+                if (validationErrors.password) {
+                  setValidationErrors({...validationErrors, password: null});
+                }
+              }}
               secureTextEntry={!showPassword}
               placeholderTextColor="#C0C0C0"
+              editable={!loading}
             />
             <TouchableOpacity 
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeButton}
+              disabled={loading}
             >
               <Image source={eye} style={styles.eyeIcon}/>
             </TouchableOpacity>
           </View>
+          {renderInputError('password')}
         </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Confirm password</Text>
-          <View style={styles.passwordContainer}>
+          <View style={[
+            styles.passwordContainer,
+            validationErrors.confirmPassword && styles.inputError
+          ]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter here"
               value={formData.confirmPassword}
-              onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
+              onChangeText={(text) => {
+                setFormData({...formData, confirmPassword: text});
+                if (validationErrors.confirmPassword) {
+                  setValidationErrors({...validationErrors, confirmPassword: null});
+                }
+              }}
               secureTextEntry={!showConfirmPassword}
               placeholderTextColor="#C0C0C0"
+              editable={!loading}
             />
             <TouchableOpacity 
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               style={styles.eyeButton}
+              disabled={loading}
             >
               <Image source={eye} style={styles.eyeIcon}/>
             </TouchableOpacity>
           </View>
+          {renderInputError('confirmPassword')}
         </View>
 
         <TouchableOpacity 
           style={styles.checkboxContainer}
-          onPress={() => setIsChecked(!isChecked)}
+          onPress={() => {
+            if (!loading) {
+              setIsChecked(!isChecked);
+              if (validationErrors.terms) {
+                setValidationErrors({...validationErrors, terms: null});
+              }
+            }
+          }}
+          disabled={loading}
         >
-          <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
+          <View style={[
+            styles.checkbox, 
+            isChecked && styles.checkboxChecked,
+            validationErrors.terms && styles.checkboxError
+          ]}>
             {isChecked && <Text style={styles.checkmark}>✓</Text>}
           </View>
           <Text style={styles.checkboxText}>
@@ -157,107 +320,68 @@ const SignUpScreen = ({ navigation }) => {
             <Text style={styles.linkText}>Privacy policy</Text> of this platform
           </Text>
         </TouchableOpacity>
+        {renderInputError('terms')}
 
         <TouchableOpacity
-          style={styles.fullWidthButton}
-          onPress={() => setShowOTPModal(true)}
+          style={[
+            styles.fullWidthButton,
+            loading && styles.buttonDisabled
+          ]}
+          onPress={handleSignUp}
+          disabled={loading}
         >
-          <Text style={styles.fullWidthButtonText}>CREATE ACCOUNT</Text>
+          {loading ? (
+            <ActivityIndicator color="#ffffff" size="small" />
+          ) : (
+            <Text style={styles.fullWidthButtonText}>CREATE ACCOUNT</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.signInContainer}
+          onPress={() => navigation.navigate('Login')}
+          disabled={loading}
+        >
+          <Text style={styles.signInText}>
+            Already have an account? <Text style={styles.signInLink}>Sign In</Text>
+          </Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* OTP Modal */}
-      <Modal visible={showOTPModal} transparent animationType="slide">
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={closeOTPModal}
-        >
-          <TouchableOpacity 
-            style={styles.otpModal}
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.dragHandle} />
-            
-            <Text style={styles.otpTitle}>OTP verification</Text>
-            <Text style={styles.otpDescription}>
-              Enter the 5 digit code sent to your registered phone number below to verify your account.
-            </Text>
-            
-            <View style={styles.otpInputContainer}>
-              {otpValues.map((value, index) => (
-                <View key={index} style={styles.otpInput}>
-                  {value !== '' && <Text style={styles.otpInputText}>{value}</Text>}
-                </View>
-              ))}
-            </View>
-            
-            <View style={styles.keypadContainer}>
-              {/* Row 1: 1, 2, 3 */}
-              <View style={styles.keypadRow}>
-                {[1, 2, 3].map((number) => (
-                  <TouchableOpacity
-                    key={number}
-                    style={styles.keypadButton}
-                    onPress={() => handleOTPNumber(number)}
-                  >
-                    <Text style={styles.keypadButtonText}>{number}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              
-              {/* Row 2: 4, 5, 6 */}
-              <View style={styles.keypadRow}>
-                {[4, 5, 6].map((number) => (
-                  <TouchableOpacity
-                    key={number}
-                    style={styles.keypadButton}
-                    onPress={() => handleOTPNumber(number)}
-                  >
-                    <Text style={styles.keypadButtonText}>{number}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              
-              {/* Row 3: 7, 8, 9 */}
-              <View style={styles.keypadRow}>
-                {[7, 8, 9].map((number) => (
-                  <TouchableOpacity
-                    key={number}
-                    style={styles.keypadButton}
-                    onPress={() => handleOTPNumber(number)}
-                  >
-                    <Text style={styles.keypadButtonText}>{number}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              
-              {/* Row 4: 0, DELETE */}
-              <View style={styles.keypadRow}>
-                <View style={styles.emptyKeypadSpace} />
-                <TouchableOpacity
-                  style={styles.keypadButton}
-                  onPress={() => handleOTPNumber(0)}
-                >
-                  <Text style={styles.keypadButtonText}>0</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.deleteButton}
-                  onPress={handleOTPDelete}
-                >
-                  <Text style={styles.deleteButtonText}>DELETE</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 300,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+    color: '#333',
+  },
+  modalText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -313,6 +437,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
     color: '#333333',
   },
+  inputError: {
+    borderColor: '#FF3B30',
+  },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -340,7 +467,7 @@ const styles = StyleSheet.create({
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 40,
+    marginBottom: 10,
     marginTop: 10,
   },
   checkbox: {
@@ -356,6 +483,9 @@ const styles = StyleSheet.create({
   },
   checkboxChecked: {
     backgroundColor: '#007AFF',
+  },
+  checkboxError: {
+    borderColor: '#FF3B30',
   },
   checkmark: {
     color: '#ffffff',
@@ -376,7 +506,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
+    marginTop: 30,
+  },
+  buttonDisabled: {
+    backgroundColor: '#B0B0B0',
   },
   fullWidthButtonText: {
     color: '#ffffff',
@@ -384,96 +518,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  otpModal: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 8,
-    paddingHorizontal: 30,
-    paddingBottom: 50,
+  signInContainer: {
     alignItems: 'center',
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#D1D5DB',
-    borderRadius: 2,
-    marginBottom: 20,
-  },
-  otpTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 10,
-  },
-  otpDescription: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 22,
-  },
-  otpInputContainer: {
-    flexDirection: 'row',
     marginBottom: 40,
-    gap: 15,
   },
-  otpInput: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
+  signInText: {
+    fontSize: 14,
+    color: '#666666',
   },
-  otpInputText: {
-    fontSize: 24,
+  signInLink: {
+    color: '#007AFF',
     fontWeight: '600',
-    color: '#333333',
   },
-  keypadContainer: {
-    alignItems: 'center',
-    gap: 15,
-  },
-  keypadRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-  },
-  emptyKeypadSpace: {
-    width: 70,
-    height: 70,
-  },
-  keypadButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  keypadButtonText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#333333',
-  },
-  deleteButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButtonText: {
+  errorText: {
+    color: '#FF3B30',
     fontSize: 12,
-    fontWeight: '600',
-    color: '#333333',
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
 

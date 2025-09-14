@@ -11,7 +11,9 @@ import {
   Alert,
   Modal,
   Image,
+  ActivityIndicator,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
 import upload from '../../assets/icons/upload.png';
@@ -19,10 +21,14 @@ import calender from '../../assets/icons/calender.png';
 import camera from '../../assets/icons/camera.png';
 
 const DriverSignupScreen = ({ navigation }) => {
+  const { signUp, loading } = useAuth();
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -35,6 +41,17 @@ const DriverSignupScreen = ({ navigation }) => {
     licenseNumber: '',
   });
 
+  const truckTypes = [
+    'Standard Rigid Dump Truck',
+    'Articulated Dump Truck',
+    'Transfer Dump Truck',
+    'Super Dump Truck',
+    'Semi-trailer End Dump Truck',
+    'Flatbed Truck',
+    'Box Truck',
+    'Pickup Truck'
+  ];
+
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
@@ -43,21 +60,149 @@ const DriverSignupScreen = ({ navigation }) => {
     }
   };
 
-  const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handleUpload = () => {
-    setShowVerificationModal(true);
-  };
-
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [field]: null
+      }));
+    }
+  };
+
+  const validatePersonalDetails = () => {
+    const errors = {};
+
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    }
+
+    if (!formData.dateOfBirth.trim()) {
+      errors.dateOfBirth = 'Date of birth is required';
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      errors.phoneNumber = 'Phone number is required';
+    } else if (formData.phoneNumber.length < 10) {
+      errors.phoneNumber = 'Please enter a valid phone number';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.truckType.trim()) {
+      errors.truckType = 'Please select a truck type';
+    }
+
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1 && validatePersonalDetails()) {
+      setCurrentStep(2);
+    }
+  };
+
+  const handleSignUp = async () => {
+    try {
+      // Prepare user data
+      const userData = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        dateOfBirth: formData.dateOfBirth,
+        phone: formData.phoneNumber.trim(),
+        email: formData.email.trim(),
+        truckType: formData.truckType,
+        licenseNumber: formData.licenseNumber,
+        status: 'pending_verification',
+        profileComplete: false,
+        userType: 'driver',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Call signUp from AuthContext
+      const result = await signUp(
+        formData.email.trim(),
+        formData.password,
+        userData,
+        'driver'
+      );
+
+      if (result && result.success) {
+        // Reset form data
+        setFormData({
+          firstName: '',
+          lastName: '',
+          dateOfBirth: '',
+          phoneNumber: '',
+          email: '',
+          truckType: '',
+          password: '',
+          confirmPassword: '',
+          licenseNumber: '',
+        });
+        
+        // Show verification modal
+        setShowVerificationModal(true);
+        
+        // The AuthContext will handle the navigation after successful signup
+      } else {
+        const errorMessage = result?.error || 'Failed to create driver account. Please try again.';
+        Alert.alert('Sign Up Failed', errorMessage);
+      }
+    } catch (error) {
+      console.error('Driver sign up error:', error);
+      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
+  const showTruckTypePicker = () => {
+    Alert.alert(
+      'Select Truck Type',
+      'Choose your truck type:',
+      [
+        ...truckTypes.map(type => ({
+          text: type,
+          onPress: () => handleInputChange('truckType', type)
+        })),
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const renderInputError = (fieldName) => {
+    if (validationErrors[fieldName]) {
+      return (
+        <Text style={styles.errorText}>{validationErrors[fieldName]}</Text>
+      );
+    }
+    return null;
   };
 
   const renderProgressBar = () => (
@@ -82,44 +227,63 @@ const DriverSignupScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>First name</Text>
           <TextInput
-            style={styles.textInput}
-            placeholder="Full name"
+            style={[
+              styles.textInput,
+              validationErrors.firstName && styles.inputError
+            ]}
+            placeholder="First name"
             placeholderTextColor="#C7C7CD"
             value={formData.firstName}
             onChangeText={(value) => handleInputChange('firstName', value)}
+            editable={!loading}
           />
+          {renderInputError('firstName')}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Last name</Text>
           <TextInput
-            style={styles.textInput}
-            placeholder="Full name"
+            style={[
+              styles.textInput,
+              validationErrors.lastName && styles.inputError
+            ]}
+            placeholder="Last name"
             placeholderTextColor="#C7C7CD"
             value={formData.lastName}
             onChangeText={(value) => handleInputChange('lastName', value)}
+            editable={!loading}
           />
+          {renderInputError('lastName')}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Date of birth</Text>
           <View style={styles.inputWithIcon}>
             <TextInput
-              style={[styles.textInput, styles.textInputWithIcon]}
+              style={[
+                styles.textInput, 
+                styles.textInputWithIcon,
+                validationErrors.dateOfBirth && styles.inputError
+              ]}
               placeholder="DD/MM/YYYY"
               placeholderTextColor="#C7C7CD"
               value={formData.dateOfBirth}
               onChangeText={(value) => handleInputChange('dateOfBirth', value)}
+              editable={!loading}
             />
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity style={styles.iconButton} disabled={loading}>
               <Image source={calender} style={styles.inputCalenderImage} />
             </TouchableOpacity>
           </View>
+          {renderInputError('dateOfBirth')}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Phone number</Text>
-          <View style={styles.phoneInputContainer}>
+          <View style={[
+            styles.phoneInputContainer,
+            validationErrors.phoneNumber && styles.inputError
+          ]}>
             <Text style={styles.countryCode}>+234</Text>
             <TextInput
               style={[styles.textInput, styles.phoneInput]}
@@ -128,75 +292,116 @@ const DriverSignupScreen = ({ navigation }) => {
               value={formData.phoneNumber}
               onChangeText={(value) => handleInputChange('phoneNumber', value)}
               keyboardType="phone-pad"
+              editable={!loading}
             />
           </View>
+          {renderInputError('phoneNumber')}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Email address</Text>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              validationErrors.email && styles.inputError
+            ]}
             placeholder="Email address"
             placeholderTextColor="#C7C7CD"
             value={formData.email}
             onChangeText={(value) => handleInputChange('email', value)}
             keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!loading}
           />
+          {renderInputError('email')}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Truck type</Text>
-          <TouchableOpacity style={styles.dropdown}>
+          <TouchableOpacity 
+            style={[
+              styles.dropdown,
+              validationErrors.truckType && styles.inputError
+            ]}
+            onPress={showTruckTypePicker}
+            disabled={loading}
+          >
             <Text style={[styles.dropdownText, !formData.truckType && styles.placeholderText]}>
               {formData.truckType || 'Select here'}
             </Text>
             <Text style={styles.dropdownIcon}>⌄</Text>
           </TouchableOpacity>
+          {renderInputError('truckType')}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Create password</Text>
           <View style={styles.inputWithIcon}>
             <TextInput
-              style={[styles.textInput, styles.textInputWithIcon]}
+              style={[
+                styles.textInput, 
+                styles.textInputWithIcon,
+                validationErrors.password && styles.inputError
+              ]}
               placeholder="Enter here"
               placeholderTextColor="#C7C7CD"
               value={formData.password}
               onChangeText={(value) => handleInputChange('password', value)}
               secureTextEntry={!showPassword}
+              editable={!loading}
             />
             <TouchableOpacity 
               onPress={() => setShowPassword(!showPassword)}
               style={styles.iconButton}
+              disabled={loading}
             >
               <Image source={eye} style={styles.inputIconImage} />
             </TouchableOpacity>
           </View>
+          {renderInputError('password')}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Confirm password</Text>
           <View style={styles.inputWithIcon}>
             <TextInput
-              style={[styles.textInput, styles.textInputWithIcon]}
+              style={[
+                styles.textInput, 
+                styles.textInputWithIcon,
+                validationErrors.confirmPassword && styles.inputError
+              ]}
               placeholder="Enter here"
               placeholderTextColor="#C7C7CD"
               value={formData.confirmPassword}
               onChangeText={(value) => handleInputChange('confirmPassword', value)}
               secureTextEntry={!showConfirmPassword}
+              editable={!loading}
             />
             <TouchableOpacity 
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               style={styles.iconButton}
+              disabled={loading}
             >
               <Image source={eye} style={styles.inputIconImage} />
             </TouchableOpacity>
           </View>
+          {renderInputError('confirmPassword')}
         </View>
       </View>
 
-      <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-        <Text style={styles.nextButtonText}>NEXT</Text>
+      <TouchableOpacity 
+        style={[
+          styles.nextButton,
+          loading && styles.buttonDisabled
+        ]} 
+        onPress={handleNext}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" size="small" />
+        ) : (
+          <Text style={styles.nextButtonText}>NEXT</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -216,7 +421,7 @@ const DriverSignupScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.photoContainer}>
-          <TouchableOpacity style={styles.photoPlaceholder}>
+          <TouchableOpacity style={styles.photoPlaceholder} disabled={loading}>
             <Image source={camera} style={styles.cameraIcon} />
           </TouchableOpacity>
       </View>
@@ -229,7 +434,7 @@ const DriverSignupScreen = ({ navigation }) => {
 
         <View style={styles.documentInputGroup}>
           <Text style={styles.inputLabel}>Driver's licence</Text>
-          <TouchableOpacity style={styles.uploadField}>
+          <TouchableOpacity style={styles.uploadField} disabled={loading}>
             <Text style={styles.uploadText}>Upload here</Text>
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
@@ -243,20 +448,32 @@ const DriverSignupScreen = ({ navigation }) => {
             placeholderTextColor="#C7C7CD"
             value={formData.licenseNumber}
             onChangeText={(value) => handleInputChange('licenseNumber', value)}
+            editable={!loading}
           />
         </View>
 
         <View style={styles.documentInputGroup}>
           <Text style={styles.inputLabel}>Photo of truck</Text>
-          <TouchableOpacity style={styles.uploadField}>
+          <TouchableOpacity style={styles.uploadField} disabled={loading}>
             <Text style={styles.uploadText}>Upload here</Text>
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.nextButton} onPress={handleUpload}>
-        <Text style={styles.nextButtonText}>UPLOAD</Text>
+      <TouchableOpacity 
+        style={[
+          styles.nextButton,
+          loading && styles.buttonDisabled
+        ]} 
+        onPress={handleSignUp}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" size="small" />
+        ) : (
+          <Text style={styles.nextButtonText}>CREATE ACCOUNT</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -270,19 +487,28 @@ const DriverSignupScreen = ({ navigation }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Verification in Progress</Text>
+          <Text style={styles.modalTitle}>Account Created Successfully!</Text>
           <Text style={styles.modalText}>
-            Thank you for submitting your documents. Our team will review them and reach-out within 
-            24-48 hours once verification is complete.
+            Your driver account has been created. Our team will review your documents and reach out within 
+            24-48 hours once verification is complete. You can track your verification status in your dashboard.
           </Text>
           <TouchableOpacity 
             style={styles.closeButton} 
             onPress={() => {
               setShowVerificationModal(false);
-              navigation.navigate('DriverDashboard');
+              Alert.alert(
+                'Account Created',
+                'Welcome to our platform! Please check your verification status in the dashboard.',
+                [
+                  {
+                    text: 'Go to Dashboard',
+                    onPress: () => navigation.navigate('DriverDashboard'),
+                  },
+                ]
+              );
             }}
           >
-            <Text style={styles.closeButtonText}>CLOSE</Text>
+            <Text style={styles.closeButtonText}>CONTINUE</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -358,7 +584,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 17,
@@ -374,6 +600,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     backgroundColor: '#ffffff',
     color: '#000000',
+  },
+  inputError: {
+    borderColor: '#FF3B30',
   },
   textInputWithIcon: {
     paddingRight: 50,
@@ -448,6 +677,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 40,
   },
+  buttonDisabled: {
+    backgroundColor: '#B0B0B0',
+  },
   nextButtonText: {
     color: '#ffffff',
     fontSize: 17,
@@ -510,6 +742,12 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     tintColor: '#007AFF',
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
   },
   modalOverlay: {
     flex: 1,
