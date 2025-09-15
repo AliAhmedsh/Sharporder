@@ -1,4 +1,4 @@
-package com.shareikna
+package com.sharporder
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
