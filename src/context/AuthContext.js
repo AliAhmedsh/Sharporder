@@ -1,7 +1,26 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from 'react';
 import auth from '@react-native-firebase/auth';
-import { getFirestore, doc, setDoc, serverTimestamp, getDoc, writeBatch } from '@react-native-firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser } from '@react-native-firebase/auth';
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  serverTimestamp,
+  getDoc,
+  writeBatch,
+} from '@react-native-firebase/firestore';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  deleteUser,
+} from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext();
@@ -14,7 +33,7 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({children}) => {
   const [user, setUser] = useState(null);
   const [userType, setUserType] = useState(null); // 'shipper' or 'driver'
   const [loading, setLoading] = useState(true);
@@ -27,7 +46,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const userString = await AsyncStorage.getItem('@user');
         const userTypeString = await AsyncStorage.getItem('@userType');
-        
+
         if (userString && userTypeString) {
           setUser(JSON.parse(userString));
           setUserType(userTypeString);
@@ -43,29 +62,32 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Set navigation reference
-  const setNavigation = (navigation) => {
+  const setNavigation = navigation => {
     navigationRef.current = navigation;
   };
 
   // Monitor auth state changes
   useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged(async (user) => {
+    const unsubscribe = auth().onAuthStateChanged(async user => {
       if (user) {
         setUser(user);
         // Get user type from Firestore
         try {
           const db = getFirestore();
           const userDoc = await getDoc(doc(db, 'users', user.uid));
-          
+
           if (userDoc.exists && userDoc.data()) {
             const userData = userDoc.data();
             if (!userData || typeof userData !== 'object') {
               console.error('Invalid user data format:', userData);
               throw new Error('Invalid user data format');
             }
-            
+
             if (!userData.userType) {
-              console.warn('User document exists but userType is missing. User data:', userData);
+              console.warn(
+                'User document exists but userType is missing. User data:',
+                userData,
+              );
               // Handle case where userType is missing
               await AsyncStorage.setItem('@user', JSON.stringify(user));
               // Consider redirecting to a screen to complete profile or set userType
@@ -74,7 +96,7 @@ export const AuthProvider = ({ children }) => {
               }
               return;
             }
-            
+
             setUserType(userData.userType);
             // Save to AsyncStorage
             await AsyncStorage.setItem('@user', JSON.stringify(user));
@@ -92,9 +114,9 @@ export const AuthProvider = ({ children }) => {
           console.error('Error in auth state change handler:', {
             error: error.message,
             stack: error.stack,
-            userUid: user?.uid
+            userUid: user?.uid,
           });
-          
+
           // Set a default user type or handle the error appropriately
           setUserType(null);
           try {
@@ -130,12 +152,16 @@ export const AuthProvider = ({ children }) => {
   const saveUserToFirestore = async (uid, userData) => {
     const db = getFirestore();
     const userRef = doc(db, 'users', uid);
-    
-    await setDoc(userRef, {
-      ...userData,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-    
+
+    await setDoc(
+      userRef,
+      {
+        ...userData,
+        updatedAt: serverTimestamp(),
+      },
+      {merge: true},
+    );
+
     return true;
   };
 
@@ -143,17 +169,22 @@ export const AuthProvider = ({ children }) => {
   const signUp = async (email, password, userData, type) => {
     try {
       setLoading(true);
-      
+
       // Create user with email and password using the auth instance
-      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-      const { user } = userCredential;
+      const userCredential = await auth().createUserWithEmailAndPassword(
+        email,
+        password,
+      );
+      const {user} = userCredential;
 
       if (!user) {
         throw new Error('User creation failed');
       }
 
       // Prepare user data for Firestore
-      const displayName = userData.businessName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+      const displayName =
+        userData.businessName ||
+        `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
       const userProfile = {
         uid: user.uid,
         email: user.email,
@@ -166,7 +197,7 @@ export const AuthProvider = ({ children }) => {
 
       // Save user data to Firestore
       await saveUserToFirestore(user.uid, userProfile);
-      
+
       // Update user profile with display name
       await user.updateProfile({
         displayName,
@@ -175,27 +206,27 @@ export const AuthProvider = ({ children }) => {
       // Create a clean user object with updated profile
       const updatedUser = {
         ...user,
-        ...userProfile
+        ...userProfile,
       };
 
       // Update local state
       setUser(updatedUser);
       setUserType(type);
-      
+
       // Save to AsyncStorage
       await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
       await AsyncStorage.setItem('@userType', type);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         user: updatedUser,
-        userType: type
+        userType: type,
       };
     } catch (error) {
       console.error('Sign up error:', error);
-      return { 
-        success: false, 
-        error: getAuthErrorMessage(error.code) 
+      return {
+        success: false,
+        error: getAuthErrorMessage(error.code),
       };
     } finally {
       setLoading(false);
@@ -203,14 +234,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Get user data from Firestore
-  const getUserDataFromFirestore = async (uid) => {
+  const getUserDataFromFirestore = async uid => {
     const db = getFirestore();
     const userDoc = await getDoc(doc(db, 'users', uid));
-    
+
     if (!userDoc.exists()) {
       throw new Error('User document not found');
     }
-    
+
     return userDoc.data();
   };
 
@@ -218,63 +249,68 @@ export const AuthProvider = ({ children }) => {
   const signIn = async (email, password) => {
     try {
       setLoading(true);
-      
+
       // Sign in with email and password using the auth instance
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
-      const { user } = userCredential;
-      
+      const userCredential = await auth().signInWithEmailAndPassword(
+        email,
+        password,
+      );
+      const {user} = userCredential;
+
       if (!user) {
         throw new Error('No user returned from authentication');
       }
-      
+
       try {
         // Get user data from Firestore
         const userData = await getUserDataFromFirestore(user.uid);
         const userType = userData.userType || 'shipper'; // Default to shipper if not set
-        
+
         // Create updated user object with profile data
         const updatedUser = {
           ...user,
           ...userData,
-          displayName: userData.displayName || user.displayName || email.split('@')[0]
+          displayName:
+            userData.displayName || user.displayName || email.split('@')[0],
         };
-        
+
         // Update local state
         setUser(updatedUser);
         setUserType(userType);
-        
+
         // Save to AsyncStorage
         await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
         await AsyncStorage.setItem('@userType', userType);
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           user: updatedUser,
-          userType
+          userType,
         };
       } catch (firestoreError) {
         console.error('Firestore error during sign in:', firestoreError);
-        // If we can't access Firestore but auth succeeded, continue with minimal user data
         const minimalUser = {
           ...user,
-          displayName: user.displayName || email.split('@')[0]
+          displayName: user.displayName || email.split('@')[0],
         };
-        
+
         setUser(minimalUser);
         await AsyncStorage.setItem('@user', JSON.stringify(minimalUser));
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           user: minimalUser,
           userType: 'shipper', // Default user type
-          warning: 'Limited functionality: Could not load full user profile'
+          warning: 'Limited functionality: Could not load full user profile',
         };
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      return { 
-        success: false, 
-        error: getAuthErrorMessage(error.code) || 'Failed to sign in. Please try again.'
+      return {
+        success: false,
+        error:
+          getAuthErrorMessage(error.code) ||
+          'Failed to sign in. Please try again.',
       };
     } finally {
       setLoading(false);
@@ -282,30 +318,33 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Password reset function
-  const resetPassword = async (email) => {
+  const resetPassword = async email => {
     try {
       if (!email || !email.trim()) {
         throw new Error('Email is required');
       }
-      
+
       // Use the modular API for sending password reset email
       await sendPasswordResetEmail(auth, email.trim());
-      
-      return { 
+
+      return {
         success: true,
-        message: 'Password reset email sent successfully. Please check your inbox.'
+        message:
+          'Password reset email sent successfully. Please check your inbox.',
       };
     } catch (error) {
       console.error('Password reset error:', error);
-      return { 
-        success: false, 
-        error: getAuthErrorMessage(error.code) || 'Failed to send password reset email. Please try again.'
+      return {
+        success: false,
+        error:
+          getAuthErrorMessage(error.code) ||
+          'Failed to send password reset email. Please try again.',
       };
     }
   };
 
   // Update user profile
-  const updateProfile = async (userData) => {
+  const updateProfile = async userData => {
     try {
       if (user) {
         await getFirestore()
@@ -315,12 +354,12 @@ export const AuthProvider = ({ children }) => {
             ...userData,
             updatedAt: serverTimestamp(),
           });
-        return { success: true };
+        return {success: true};
       }
-      return { success: false, error: 'No user logged in' };
+      return {success: false, error: 'No user logged in'};
     } catch (error) {
       console.error('Update profile error:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   };
 
@@ -332,20 +371,20 @@ export const AuthProvider = ({ children }) => {
           .collection('users')
           .doc(user.uid)
           .get();
-        
+
         if (userDoc.exists) {
-          return { success: true, data: userDoc.data() };
+          return {success: true, data: userDoc.data()};
         }
       }
-      return { success: false, error: 'User not found' };
+      return {success: false, error: 'User not found'};
     } catch (error) {
       console.error('Get user data error:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   };
 
   // Helper function to get readable error messages
-  const getAuthErrorMessage = (errorCode) => {
+  const getAuthErrorMessage = errorCode => {
     switch (errorCode) {
       case 'auth/email-already-in-use':
         return 'This email address is already registered. Please use a different email or try signing in.';
@@ -388,9 +427,5 @@ export const AuthProvider = ({ children }) => {
     setNavigation,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

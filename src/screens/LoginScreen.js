@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
@@ -13,15 +13,17 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useAppContext } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
+import {useAppContext} from '../context/AppContext';
+import {useAuth} from '../context/AuthContext';
 import logo from '../assets/icons/logo.png';
 import eye from '../assets/icons/eye.png';
+import {useNavigation} from '@react-navigation/native';
 
-const LoginScreen = ({ navigation }) => {
-  const { formData, setFormData } = useAppContext();
-  const { signIn, resetPassword, loading } = useAuth();
-  
+const LoginScreen = ({navigation}) => {
+  const {navigate} = useNavigation();
+  const {formData, setFormData} = useAppContext();
+  const {signIn, resetPassword, loading} = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
@@ -49,6 +51,11 @@ const LoginScreen = ({ navigation }) => {
   const [loginError, setLoginError] = useState('');
 
   const handleLogin = async () => {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'ShipperApp'}], // 👈 this goes to Dashboard inside ShipperStack
+    });
+    return;
     if (!validateForm()) {
       return;
     }
@@ -58,8 +65,6 @@ const LoginScreen = ({ navigation }) => {
       const result = await signIn(email, formData.password);
 
       if (result && result.success) {
-        // The AuthContext will handle the navigation based on the updated auth state
-        // No need to navigate manually here
       } else {
         const errorMessage = result?.error || 'Login failed. Please try again.';
         setLoginError(errorMessage);
@@ -67,7 +72,8 @@ const LoginScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
+      const errorMessage =
+        error?.message || 'An unexpected error occurred. Please try again.';
       setLoginError(errorMessage);
       Alert.alert('Error', errorMessage);
     }
@@ -93,7 +99,7 @@ const LoginScreen = ({ navigation }) => {
       'Reset Password',
       'Are you sure you want to reset your password? We will send a reset link to your email.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        {text: 'Cancel', style: 'cancel'},
         {
           text: 'Send Reset Link',
           onPress: async () => {
@@ -101,18 +107,18 @@ const LoginScreen = ({ navigation }) => {
             if (result.success) {
               Alert.alert(
                 'Reset Link Sent',
-                'Please check your email for password reset instructions.'
+                'Please check your email for password reset instructions.',
               );
             } else {
               Alert.alert('Error', result.error);
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  const renderInputError = (fieldName) => {
+  const renderInputError = fieldName => {
     if (validationErrors[fieldName]) {
       return (
         <Text style={styles.errorText}>{validationErrors[fieldName]}</Text>
@@ -124,11 +130,10 @@ const LoginScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
-      <ScrollView 
+      <ScrollView
         style={styles.formContainer}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         <View style={styles.loginLogoContainer}>
           <Image source={logo} style={styles.logoImage} />
         </View>
@@ -144,11 +149,11 @@ const LoginScreen = ({ navigation }) => {
             <TextInput
               style={[
                 styles.input,
-                validationErrors.email && styles.inputError
+                validationErrors.email && styles.inputError,
               ]}
               placeholder="Enter your email"
               value={email}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setEmail(text);
                 if (validationErrors.email) {
                   setValidationErrors({...validationErrors, email: null});
@@ -164,16 +169,17 @@ const LoginScreen = ({ navigation }) => {
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Password</Text>
-            <View style={[
-              styles.passwordContainer,
-              validationErrors.password && styles.inputError
-            ]}>
+            <View
+              style={[
+                styles.passwordContainer,
+                validationErrors.password && styles.inputError,
+              ]}>
               <TextInput
                 style={styles.passwordInput}
                 placeholder="Enter your password"
                 value={formData.password}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, password: text });
+                onChangeText={text => {
+                  setFormData({...formData, password: text});
                   if (validationErrors.password) {
                     setValidationErrors({...validationErrors, password: null});
                   }
@@ -182,11 +188,10 @@ const LoginScreen = ({ navigation }) => {
                 placeholderTextColor="#C0C0C0"
                 editable={!loading}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
-                disabled={loading}
-              >
+                disabled={loading}>
                 <Image source={eye} style={styles.eyeIcon} />
               </TouchableOpacity>
             </View>
@@ -194,37 +199,27 @@ const LoginScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.loginLinks}>
-            <TouchableOpacity 
-              onPress={handleForgotPassword}
-              disabled={loading}
-            >
+            <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
               <Text style={styles.signUpText}>Forgot password?</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handleSignUp}
-              disabled={loading}
-            >
+            <TouchableOpacity onPress={handleSignUp} disabled={loading}>
               <Text style={styles.linkText}>
-                Don't have an account? <Text style={styles.signUpText}>Sign up</Text>
+                Don't have an account?{' '}
+                <Text style={styles.signUpText}>Sign up</Text>
               </Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={[
-              styles.fullWidthButton,
-              loading && styles.buttonDisabled
-            ]} 
+          <TouchableOpacity
+            style={[styles.fullWidthButton, loading && styles.buttonDisabled]}
             onPress={handleLogin}
-            disabled={loading}
-          >
+            disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <Text style={styles.fullWidthButtonText}>LOGIN</Text>
             )}
           </TouchableOpacity>
-
         </View>
       </ScrollView>
     </SafeAreaView>

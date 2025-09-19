@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {
@@ -14,12 +14,12 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { useAppContext } from '../../context/AppContext';
+import {useAppContext} from '../../context/AppContext';
 import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
 
-const SignUpScreen = ({ navigation }) => {
-  const { formData, setFormData, showOTPModal, setShowOTPModal } =
+const SignUpScreen = ({navigation}) => {
+  const {formData, setFormData, showOTPModal, setShowOTPModal} =
     useAppContext();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +33,11 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   const handleSignUp = async () => {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'ShipperApp'}],
+    });
+    return;
     if (
       !formData.email ||
       !formData.password ||
@@ -52,7 +57,7 @@ const SignUpScreen = ({ navigation }) => {
         formData.email,
         formData.password,
       );
-      const { uid, email } = userCredential.user;
+      const {uid, email} = userCredential.user;
       // Add user data to Firestore
       await firestore().collection('users').doc(uid).set({
         businessName: formData.businessName,
@@ -61,7 +66,9 @@ const SignUpScreen = ({ navigation }) => {
         createdAt: firestore.FieldValue.serverTimestamp(),
         role: 'shipper',
       });
-      setShowOTPModal(true);
+      console.log('asdasdasd');
+      navigation.navigate('Dashboard');
+      // setShowOTPModal(true);
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
         alert('That email address is already in use!');
@@ -119,8 +126,7 @@ const SignUpScreen = ({ navigation }) => {
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
       <ScrollView
         style={styles.formContainer}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Image source={back} style={styles.backArrow} />
@@ -140,7 +146,7 @@ const SignUpScreen = ({ navigation }) => {
             placeholder="Full name"
             value={formData.businessName}
             onChangeText={text =>
-              setFormData({ ...formData, businessName: text })
+              setFormData({...formData, businessName: text})
             }
             placeholderTextColor="#C0C0C0"
           />
@@ -152,7 +158,7 @@ const SignUpScreen = ({ navigation }) => {
             style={styles.input}
             placeholder="Email address"
             value={formData.email}
-            onChangeText={text => setFormData({ ...formData, email: text })}
+            onChangeText={text => setFormData({...formData, email: text})}
             keyboardType="email-address"
             placeholderTextColor="#C0C0C0"
           />
@@ -164,7 +170,7 @@ const SignUpScreen = ({ navigation }) => {
             style={styles.input}
             placeholder="+234 08012345678"
             value={formData.phone}
-            onChangeText={text => setFormData({ ...formData, phone: text })}
+            onChangeText={text => setFormData({...formData, phone: text})}
             keyboardType="phone-pad"
             placeholderTextColor="#C0C0C0"
           />
@@ -177,16 +183,13 @@ const SignUpScreen = ({ navigation }) => {
               style={styles.passwordInput}
               placeholder="Enter here"
               value={formData.password}
-              onChangeText={text =>
-                setFormData({ ...formData, password: text })
-              }
+              onChangeText={text => setFormData({...formData, password: text})}
               secureTextEntry={!showPassword}
               placeholderTextColor="#C0C0C0"
             />
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeButton}
-            >
+              style={styles.eyeButton}>
               <Image source={eye} style={styles.eyeIcon} />
             </TouchableOpacity>
           </View>
@@ -200,15 +203,14 @@ const SignUpScreen = ({ navigation }) => {
               placeholder="Enter here"
               value={formData.confirmPassword}
               onChangeText={text =>
-                setFormData({ ...formData, confirmPassword: text })
+                setFormData({...formData, confirmPassword: text})
               }
               secureTextEntry={!showConfirmPassword}
               placeholderTextColor="#C0C0C0"
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              style={styles.eyeButton}
-            >
+              style={styles.eyeButton}>
               <Image source={eye} style={styles.eyeIcon} />
             </TouchableOpacity>
           </View>
@@ -216,8 +218,7 @@ const SignUpScreen = ({ navigation }) => {
 
         <TouchableOpacity
           style={styles.checkboxContainer}
-          onPress={() => setIsChecked(!isChecked)}
-        >
+          onPress={() => setIsChecked(!isChecked)}>
           <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
             {isChecked && <Text style={styles.checkmark}>✓</Text>}
           </View>
@@ -231,8 +232,7 @@ const SignUpScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.fullWidthButton}
           onPress={handleSignUp}
-          disabled={loading}
-        >
+          disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -247,13 +247,11 @@ const SignUpScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={closeOTPModal}
-        >
+          onPress={closeOTPModal}>
           <TouchableOpacity
             style={styles.otpModal}
             activeOpacity={1}
-            onPress={e => e.stopPropagation()}
-          >
+            onPress={e => e.stopPropagation()}>
             <View style={styles.dragHandle} />
 
             <Text style={styles.otpTitle}>OTP verification</Text>
@@ -279,8 +277,7 @@ const SignUpScreen = ({ navigation }) => {
                   <TouchableOpacity
                     key={number}
                     style={styles.keypadButton}
-                    onPress={() => handleOTPNumber(number)}
-                  >
+                    onPress={() => handleOTPNumber(number)}>
                     <Text style={styles.keypadButtonText}>{number}</Text>
                   </TouchableOpacity>
                 ))}
@@ -292,8 +289,7 @@ const SignUpScreen = ({ navigation }) => {
                   <TouchableOpacity
                     key={number}
                     style={styles.keypadButton}
-                    onPress={() => handleOTPNumber(number)}
-                  >
+                    onPress={() => handleOTPNumber(number)}>
                     <Text style={styles.keypadButtonText}>{number}</Text>
                   </TouchableOpacity>
                 ))}
@@ -305,8 +301,7 @@ const SignUpScreen = ({ navigation }) => {
                   <TouchableOpacity
                     key={number}
                     style={styles.keypadButton}
-                    onPress={() => handleOTPNumber(number)}
-                  >
+                    onPress={() => handleOTPNumber(number)}>
                     <Text style={styles.keypadButtonText}>{number}</Text>
                   </TouchableOpacity>
                 ))}
@@ -317,14 +312,12 @@ const SignUpScreen = ({ navigation }) => {
                 <View style={styles.emptyKeypadSpace} />
                 <TouchableOpacity
                   style={styles.keypadButton}
-                  onPress={() => handleOTPNumber(0)}
-                >
+                  onPress={() => handleOTPNumber(0)}>
                   <Text style={styles.keypadButtonText}>0</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={handleOTPDelete}
-                >
+                  onPress={handleOTPDelete}>
                   <Text style={styles.deleteButtonText}>DELETE</Text>
                 </TouchableOpacity>
               </View>

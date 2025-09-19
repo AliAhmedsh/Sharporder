@@ -1,9 +1,11 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
+import React, { useContext, useEffect, useState, useRef } from 'react';
+import {
+  NavigationContainer,
+  useNavigationContainerRef,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { useEffect, useRef } from 'react';
 
 // Import screens
 import {
@@ -72,7 +74,10 @@ const DriverStack = () => (
     <Stack.Screen name="DriverDashboard" component={DriverDashboardScreen} />
     <Stack.Screen name="DriverLoadBoard" component={DriverLoadBoardScreen} />
     <Stack.Screen name="DriverOnTheWay" component={DriverOnTheWayScreen} />
-    <Stack.Screen name="DriverDeliveryComplete" component={DriverDeliveryCompleteScreen} />
+    <Stack.Screen
+      name="DriverDeliveryComplete"
+      component={DriverDeliveryCompleteScreen}
+    />
     <Stack.Screen name="TripDetails" component={TripDetailsScreen} />
   </Stack.Navigator>
 );
@@ -87,7 +92,7 @@ const LoadingScreen = () => (
 const AppNavigator = () => {
   const { user, userType, loading, setNavigation } = useAuth();
   const navigationRef = useNavigationContainerRef();
-  
+
   // Set navigation reference in AuthContext
   useEffect(() => {
     if (navigationRef.current) {

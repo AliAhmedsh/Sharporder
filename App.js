@@ -1,19 +1,26 @@
 import React from 'react';
-import { AppProvider } from './src/context/AppContext';
+import {LogBox, View} from 'react-native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {QueryClient, QueryClientProvider} from 'react-query';
+import {AppProvider} from './src/context/AppContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import { LogBox } from 'react-native';
-import { AuthProvider } from './src/context/AuthContext';
+import {AuthProvider} from './src/context/AuthContext';
 
-LogBox.ignoreAllLogs();
-
-const App = () => {
-  return ( 
-    <AuthProvider>
-      <AppProvider>
-        <AppNavigator />
-      </AppProvider>
-    </AuthProvider>
+export default function App() {
+  LogBox.ignoreAllLogs(true);
+  const queryClient = new QueryClient();
+  return (
+    <GestureHandlerRootView style={{flex: 1}}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AppProvider>
+            <SafeAreaProvider>
+              <AppNavigator />
+            </SafeAreaProvider>
+          </AppProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
-};
-
-export default App;
+}

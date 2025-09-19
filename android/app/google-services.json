@@ -1,43 +1,35 @@
 {
   "project_info": {
-    "project_number": "91289767736",
-    "firebase_url": "https://shareikna-b85bb-default-rtdb.firebaseio.com",
-    "project_id": "shareikna-b85bb",
-    "storage_bucket": "shareikna-b85bb.appspot.com"
+    "project_number": "820273361039",
+    "firebase_url": "https://gram-4a58a-default-rtdb.firebaseio.com",
+    "project_id": "gram-4a58a",
+    "storage_bucket": "gram-4a58a.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:91289767736:android:5ae698afa8fb75d7623bcd",
+        "mobilesdk_app_id": "1:820273361039:android:31822932009e943577c0fa",
         "android_client_info": {
-          "package_name": "com.shareikna"
+          "package_name": "com.weblahChatApp"
         }
       },
       "oauth_client": [
         {
-          "client_id": "91289767736-5p8b6qdsv3i5s873e1cd16mje8314bca.apps.googleusercontent.com",
+          "client_id": "820273361039-tu9ccoatkg8t47dlrj8c2vm7auu5u69t.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAw1IInaZpHjtR_ddHUXptiis3Djlasidw"
+          "current_key": "AIzaSyDnYorBdk9HkEtvtcyZacLDMy9EhJoD8W4"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "91289767736-5p8b6qdsv3i5s873e1cd16mje8314bca.apps.googleusercontent.com",
+              "client_id": "820273361039-tu9ccoatkg8t47dlrj8c2vm7auu5u69t.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "91289767736-6743spdn6apk7e9hn1580j8g80fmt1n1.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "org.reactjs.native.example.Shareikna-CLi",
-                "app_store_id": "6503903890"
-              }
             }
           ]
         }
