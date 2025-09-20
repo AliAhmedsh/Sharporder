@@ -129,56 +129,78 @@ const DriverSignupScreen = ({ navigation }) => {
   };
 
   const handleSignUp = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     try {
-      // Prepare user data
+      setLoading(true);
+      
+      // Create user with email and password
+      const userCredential = await auth().createUserWithEmailAndPassword(
+        formData.email.trim(),
+        formData.password
+      );
+      
+      const { uid, email } = userCredential.user;
+      
+      // Add driver data to Firestore
       const userData = {
+        uid,
+        email,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
         dateOfBirth: formData.dateOfBirth,
-        phone: formData.phoneNumber.trim(),
-        email: formData.email.trim(),
         truckType: formData.truckType,
-        licenseNumber: formData.licenseNumber,
+        licenseNumber: formData.licenseNumber.trim(),
+        userType: 'driver',
         status: 'pending_verification',
         profileComplete: false,
-        userType: 'driver',
-        createdAt: new Date().toISOString(),
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       };
-
-      // Call signUp from AuthContext
-      const result = await signUp(
-        formData.email.trim(),
-        formData.password,
-        userData,
-        'driver'
+      
+      await firestore().collection('users').doc(uid).set(userData);
+      
+      // Show success message and navigate to driver dashboard
+      Alert.alert(
+        'Success',
+        'Your driver account has been created successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to DriverApp which is the root of the driver stack
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'DriverApp' }],
+              });
+            },
+          },
+        ]
       );
-
-      if (result && result.success) {
-        // Reset form data
-        setFormData({
-          firstName: '',
-          lastName: '',
-          dateOfBirth: '',
-          phoneNumber: '',
-          email: '',
-          truckType: '',
-          password: '',
-          confirmPassword: '',
-          licenseNumber: '',
-        });
-        
-        // Show verification modal
-        setShowVerificationModal(true);
-        
-        // The AuthContext will handle the navigation after successful signup
-      } else {
-        const errorMessage = result?.error || 'Failed to create driver account. Please try again.';
-        Alert.alert('Sign Up Failed', errorMessage);
-      }
+      
     } catch (error) {
-      console.error('Driver sign up error:', error);
-      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
-      Alert.alert('Error', errorMessage);
+      console.error('Registration error:', error);
+      let errorMessage = 'An error occurred during registration. Please try again.';
+      
+      // Handle common Firebase auth errors
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'The email address is not valid.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'The password is too weak. Please choose a stronger password.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Email/password accounts are not enabled.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Registration Failed', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 

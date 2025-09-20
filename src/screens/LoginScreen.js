@@ -51,29 +51,48 @@ const LoginScreen = ({navigation}) => {
   const [loginError, setLoginError] = useState('');
 
   const handleLogin = async () => {
-    navigation.reset({
-      index: 0,
-      routes: [{name: 'ShipperApp'}], // 👈 this goes to Dashboard inside ShipperStack
-    });
-    return;
     if (!validateForm()) {
       return;
     }
 
     try {
       setLoginError('');
+      console.log('Attempting to log in...');
+      
       const result = await signIn(email, formData.password);
+      console.log('Sign in result:', result);
 
       if (result && result.success) {
+        console.log('Login successful, waiting for navigation...');
+        // The navigation will be handled by the auth state change in AppNavigator
+        // No need to navigate manually here
       } else {
         const errorMessage = result?.error || 'Login failed. Please try again.';
+        console.error('Login failed:', errorMessage);
         setLoginError(errorMessage);
         Alert.alert('Login Failed', errorMessage);
       }
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage =
-        error?.message || 'An unexpected error occurred. Please try again.';
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      // Handle common Firebase auth errors
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = 'Invalid email or password';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed login attempts. Please try again later.';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled. Please contact support.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('Login error details:', {
+        code: error.code,
+        message: error.message,
+        error: error
+      });
+      
       setLoginError(errorMessage);
       Alert.alert('Error', errorMessage);
     }

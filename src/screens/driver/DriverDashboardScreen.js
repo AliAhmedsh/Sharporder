@@ -14,12 +14,15 @@ import {
   Easing,
   Platform,
   Modal,
+  Alert,
 } from 'react-native';
+import auth from '@react-native-firebase/auth';
 
 import MapView from 'react-native-maps';
 import hamburger from '../../assets/icons/hamburger.png';
 import headset from '../../assets/icons/headset.png';
 import help from '../../assets/icons/help.png';
+// import logout from '../../assets/icons/logout.png';
 import wallet from '../../assets/icons/wallet.png';
 import trips from '../../assets/icons/trips.png';
 import loadboard from '../../assets/icons/loadboard.png';
@@ -166,6 +169,21 @@ const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPr
 const { height, width: screenWidth } = Dimensions.get('window');
 
 const DriverDashboardScreen = ({ navigation }) => {
+  const handleLogout = async () => {
+    try {
+      await auth().signOut();
+      // Clear any local storage if needed
+      await AsyncStorage.multiRemove(['@user', '@userType']);
+      // Navigate to login screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      console.error('Logout error:', error);
+    }
+  };
   const bottomSheetHeight = Math.round(height * 0.95);
   const PEEK_HEIGHT = 350;
   const bottomSheetTranslateY = useRef(new Animated.Value(bottomSheetHeight - PEEK_HEIGHT)).current;
@@ -475,6 +493,13 @@ const DriverDashboardScreen = ({ navigation }) => {
                 icon: help,
                 onPress: closeSidePanel
               },
+              { 
+                id: 'logout', 
+                title: 'Logout', 
+                icon: 'x',
+                onPress: handleLogout,
+                isLogout: true
+              },
             ].map((item, idx, arr) => (
               <View key={item.id}>
                 <TouchableOpacity
@@ -483,7 +508,7 @@ const DriverDashboardScreen = ({ navigation }) => {
                   onPress={item.onPress}
                 >
                   <Image style={styles.drawerItemIcon} source={item.icon} />
-                  <Text style={styles.drawerItemText}>{item.title}</Text>
+                  <Text style={[styles.drawerItemText, item.isLogout && styles.logoutText]}>{item.title}</Text>
                 </TouchableOpacity>
                 {idx < arr.length - 1 && <View style={styles.drawerSeparator} />}
               </View>
@@ -1129,7 +1154,11 @@ const styles = StyleSheet.create({
   drawerItemText: {
     fontSize: 16,
     color: '#333',
-    fontWeight: '400',
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  logoutText: {
+    color: '#FF4444',
   },
   drawerSeparator: {
     height: 1,

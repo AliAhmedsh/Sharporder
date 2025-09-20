@@ -92,39 +92,28 @@ const LoadingScreen = () => (
 const AppNavigator = () => {
   const { user, userType, loading, setNavigation } = useAuth();
   const navigationRef = useNavigationContainerRef();
+  const [appIsReady, setAppIsReady] = useState(false);
 
   // Set navigation reference in AuthContext
   useEffect(() => {
     if (navigationRef.current) {
       setNavigation(navigationRef.current);
     }
+    
+    // Cleanup function
+    return () => {
+      setNavigation(null);
+    };
   }, [navigationRef.current]);
 
-  const [appIsReady, setAppIsReady] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-
-  // Handle initial app loading and authentication state
+  // Handle initial app loading
   useEffect(() => {
-    // Only show splash screen for initial app load
     const timer = setTimeout(() => {
       setAppIsReady(true);
-    }, 2000);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, []);
-
-  // Update initializing state when auth state is determined
-  useEffect(() => {
-    if (!loading) {
-      setInitializing(false);
-    }
-  }, [loading]);
-
-  // Determine the initial route based on authentication state
-  const getInitialRouteName = () => {
-    if (!user) return 'Auth';
-    return userType === 'shipper' ? 'ShipperApp' : 'DriverApp';
-  };
 
   // Show splash screen while app is initializing
   if (!appIsReady) {
@@ -132,7 +121,7 @@ const AppNavigator = () => {
   }
 
   // Show loading indicator while checking auth state
-  if (loading && initializing) {
+  if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
@@ -140,18 +129,55 @@ const AppNavigator = () => {
     );
   }
 
+  // Determine which stack to show based on user type
+  const getActiveStack = () => {
+    if (!user) {
+      // No user is signed in
+      return (
+        <Stack.Screen name="Auth">
+          {() => (
+            <AuthStack />
+          )}
+        </Stack.Screen>
+      );
+    }
+    
+    if (userType === 'shipper') {
+      // User is a shipper
+      return (
+        <Stack.Screen name="ShipperApp">
+          {() => (
+            <ShipperStack />
+          )}
+        </Stack.Screen>
+      );
+    }
+    
+    // User is a driver
+    return (
+      <Stack.Screen name="DriverApp">
+        {() => (
+          <DriverStack />
+        )}
+      </Stack.Screen>
+    );
+  };
+
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer 
+      ref={navigationRef}
+      onStateChange={(state) => {
+        // This helps with debugging navigation state
+        console.log('Navigation state changed:', state);
+      }}
+    >
       <Stack.Navigator
-        initialRouteName={getInitialRouteName()}
         screenOptions={{
           headerShown: false,
           animation: 'fade',
         }}
       >
-        <Stack.Screen name="Auth" component={AuthStack} />
-        <Stack.Screen name="ShipperApp" component={ShipperStack} />
-        <Stack.Screen name="DriverApp" component={DriverStack} />
+        {getActiveStack()}
       </Stack.Navigator>
     </NavigationContainer>
   );

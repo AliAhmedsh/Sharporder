@@ -13,6 +13,7 @@ import {
   Modal,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {useAppContext} from '../../context/AppContext';
 import back from '../../assets/icons/back.png';
@@ -33,50 +34,99 @@ const SignUpScreen = ({navigation}) => {
   };
 
   const handleSignUp = async () => {
-    navigation.reset({
-      index: 0,
-      routes: [{name: 'ShipperApp'}],
-    });
-    return;
     if (
       !formData.email ||
       !formData.password ||
       !formData.businessName ||
       !formData.phone
     ) {
-      alert('Please fill all fields');
+      Alert.alert('Error', 'Please fill all required fields');
       return;
     }
+    
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
+    
+    if (formData.password.length < 6) {
+      Alert.alert('Error', 'Password should be at least 6 characters');
+      return;
+    }
+    
     setLoading(true);
+    
     try {
+      // Create user with email and password
       const userCredential = await auth().createUserWithEmailAndPassword(
-        formData.email,
+        formData.email.trim(),
         formData.password,
       );
+      
       const {uid, email} = userCredential.user;
+      
       // Add user data to Firestore
       await firestore().collection('users').doc(uid).set({
-        businessName: formData.businessName,
+        uid: uid,
+        businessName: formData.businessName.trim(),
         email: email,
-        phone: formData.phone,
+        phone: formData.phone.trim(),
+        userType: 'shipper',
         createdAt: firestore.FieldValue.serverTimestamp(),
-        role: 'shipper',
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
-      console.log('asdasdasd');
-      navigation.navigate('Dashboard');
-      // setShowOTPModal(true);
+      
+      // Show success message and navigate to dashboard
+      Alert.alert(
+        'Success',
+        'Account created successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to ShipperApp which is the root of the shipper stack
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'ShipperApp' }],
+              });
+            },
+          },
+        ],
+      );
+      
     } catch (error) {
-      if (error.code === 'auth/email-already-in-use') {
-        alert('That email address is already in use!');
-      } else if (error.code === 'auth/invalid-email') {
-        alert('That email address is invalid!');
+      console.error('Signup error:', error);
+      let errorMessage = 'An error occurred during sign up. Please try again.';
+      
+      try {
+        // Safely access error properties
+        const errorCode = error?.code;
+        const errorMsg = error?.message || String(error);
+        
+        console.log('Error details:', { errorCode, errorMsg });
+        
+        // Handle common Firebase auth errors
+        if (errorCode === 'auth/email-already-in-use') {
+          errorMessage = 'An account with this email already exists.';
+        } else if (errorCode === 'auth/invalid-email') {
+          errorMessage = 'The email address is not valid.';
+        } else if (errorCode === 'auth/weak-password') {
+          errorMessage = 'The password is too weak. Please choose a stronger password (minimum 6 characters).';
+        } else if (errorCode === 'auth/operation-not-allowed') {
+          errorMessage = 'Email/password accounts are not enabled.';
+        } else if (errorMsg) {
+          errorMessage = typeof errorMsg === 'string' ? errorMsg : 'An unknown error occurred.';
+        }
+      } catch (nestedError) {
+        console.error('Error processing error message:', nestedError);
+        errorMessage = 'An unexpected error occurred. Please try again later.';
+      }
+      
+      // Show error message to user
+      if (typeof Alert.alert === 'function') {
+        Alert.alert('Sign Up Failed', errorMessage);
       } else {
-        alert(error.message);
-        console.log('error.message', error.message);
+        console.error('Alert.alert is not available. Error:', errorMessage);
       }
     } finally {
       setLoading(false);

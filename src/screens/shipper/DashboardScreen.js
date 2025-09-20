@@ -17,7 +17,9 @@ import {
   Animated,
   Easing,
   Modal,
+  Alert,
 } from 'react-native';
+import auth from '@react-native-firebase/auth';
 
 import MapView from 'react-native-maps';
 import DeliveryDetailsScreen from './DeliveryDetailsScreen';
@@ -29,6 +31,7 @@ import payments from '../../assets/icons/payments.png';
 import shipments from '../../assets/icons/shipments.png';
 import loadboard from '../../assets/icons/loadboard.png';
 import search from '../../assets/icons/search.png';
+// import logout from '../../assets/icons/logout.png';
 
 const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSuggestionPress }) => {
   const suggestions = ['Home', 'Office', 'Warehouse', 'Airport', 'Mall', 'Harbor', 'Central Park'];
@@ -74,6 +77,21 @@ const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSugge
 const { height, width: screenWidth } = Dimensions.get('window');
 
 const DashboardScreen = ({ navigation }) => {
+  const handleLogout = async () => {
+    try {
+      await auth().signOut();
+      // Clear any local storage if needed
+      await AsyncStorage.multiRemove(['@user', '@userType']);
+      // Navigate to login screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      console.error('Logout error:', error);
+    }
+  };
   const bottomSheetHeight = Math.round(height * 0.8);
   const PEEK_HEIGHT = 200;
   const bottomSheetTranslateY = useRef(new Animated.Value(bottomSheetHeight - PEEK_HEIGHT)).current;
@@ -367,6 +385,13 @@ const DashboardScreen = ({ navigation }) => {
                 icon: help,
                 onPress: closeSidePanel
               },
+              { 
+                id: 'logout', 
+                title: 'Logout', 
+                icon: 'x',
+                onPress: handleLogout,
+                isLogout: true
+              },
             ].map((item, idx, arr) => (
               <View key={item.id}>
                 <TouchableOpacity
@@ -374,8 +399,8 @@ const DashboardScreen = ({ navigation }) => {
                   activeOpacity={0.7}
                   onPress={item.onPress}
                 >
-                  <Image style={styles.drawerItemIcon} source={item.icon} />
-                  <Text style={styles.drawerItemText}>{item.title}</Text>
+                  <Image source={item.icon} style={styles.menuIcon} />
+                  <Text style={[styles.menuText, item.isLogout && styles.logoutText]}>{item.title}</Text>
                 </TouchableOpacity>
                 {idx < arr.length - 1 && <View style={styles.drawerSeparator} />}
               </View>
@@ -512,16 +537,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  drawerItemIcon: {
+  menuIcon: {
     marginRight: 16,
     width: 24,
     height: 24,
     resizeMode: 'contain',
   },
-  drawerItemText: {
+  menuText: {
     fontSize: 16,
     color: '#333',
-    fontWeight: '500',
+    marginLeft: 12,
+  },
+  logoutText: {
+    color: '#FF4444',
   },
   drawerSeparator: {
     height: 1,

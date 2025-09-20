@@ -5,25 +5,48 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import auth from '@react-native-firebase/auth';
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  serverTimestamp,
-  getDoc,
-  writeBatch,
-} from '@react-native-firebase/firestore';
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  deleteUser,
-} from '@react-native-firebase/auth';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const AuthContext = createContext();
+// Firebase v9+ modular imports
+import { initializeApp } from '@react-native-firebase/app';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut as firebaseSignOut, 
+  sendPasswordResetEmail, 
+  deleteUser, 
+  onAuthStateChanged 
+} from '@react-native-firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  serverTimestamp, 
+  writeBatch 
+} from '@react-native-firebase/firestore';
+
+// Initialize Firebase
+const firebaseConfig = {
+  // Your Firebase config here
+  // apiKey: "YOUR_API_KEY",
+  // authDomain: "YOUR_AUTH_DOMAIN",
+  // projectId: "YOUR_PROJECT_ID",
+  // storageBucket: "YOUR_STORAGE_BUCKET",
+  // messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  // appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const AuthContext = createContext(null);
+
+export { AuthContext }; // Explicitly export AuthContext
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -33,292 +56,280 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({children}) => {
-  const [user, setUser] = useState(null);
-  const [userType, setUserType] = useState(null); // 'shipper' or 'driver'
-  const [loading, setLoading] = useState(true);
-  const navigationRef = useRef();
-  const [initializing, setInitializing] = useState(true);
-
-  // Load user data from storage on initial load
-  useEffect(() => {
-    const loadUserFromStorage = async () => {
-      try {
-        const userString = await AsyncStorage.getItem('@user');
-        const userTypeString = await AsyncStorage.getItem('@userType');
-
-        if (userString && userTypeString) {
-          setUser(JSON.parse(userString));
-          setUserType(userTypeString);
-        }
-      } catch (error) {
-        console.error('Error loading user from storage:', error);
-      } finally {
-        setInitializing(false);
+export const AuthProvider = ({ children }) => {
+  // Initialize state with proper default values
+  const [state, setState] = useState({
+    user: null,
+    userType: null, // 'shipper' or 'driver'
+    loading: true,
+    initializing: true
+  });
+  
+  const navigationRef = useRef(null);
+  
+  // Extract state for easier access
+  const { user, userType, loading, initializing } = state;
+  
+  // State updater functions
+  const setUser = (userData) => setState(prev => ({ ...prev, user: userData }));
+  const setUserType = (type) => setState(prev => ({ ...prev, userType: type }));
+  const setLoading = (isLoading) => setState(prev => ({ ...prev, loading: isLoading }));
+  const setInitializing = (isInitializing) => setState(prev => ({ ...prev, initializing: isInitializing }));
+  
+  // Get user data from Firestore
+  const getUserDataFromFirestore = async (uid) => {
+    try {
+      if (!uid) {
+        console.error('No UID provided to getUserDataFromFirestore');
+        return null;
       }
-    };
+      
+      const userRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userRef);
 
-    loadUserFromStorage();
-  }, []);
+      // Check if document exists (handle both function and boolean cases)
+      const docExists = typeof userDoc.exists === 'function' 
+        ? userDoc.exists() 
+        : userDoc.exists;
 
-  // Set navigation reference
-  const setNavigation = navigation => {
-    navigationRef.current = navigation;
-  };
-
-  // Monitor auth state changes
-  useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged(async user => {
-      if (user) {
-        setUser(user);
-        // Get user type from Firestore
-        try {
-          const db = getFirestore();
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-
-          if (userDoc.exists && userDoc.data()) {
-            const userData = userDoc.data();
-            if (!userData || typeof userData !== 'object') {
-              console.error('Invalid user data format:', userData);
-              throw new Error('Invalid user data format');
-            }
-
-            if (!userData.userType) {
-              console.warn(
-                'User document exists but userType is missing. User data:',
-                userData,
-              );
-              // Handle case where userType is missing
-              await AsyncStorage.setItem('@user', JSON.stringify(user));
-              // Consider redirecting to a screen to complete profile or set userType
-              if (navigationRef.current) {
-                navigationRef.current.navigate('RoleSelection');
-              }
-              return;
-            }
-
-            setUserType(userData.userType);
-            // Save to AsyncStorage
-            await AsyncStorage.setItem('@user', JSON.stringify(user));
-            await AsyncStorage.setItem('@userType', userData.userType);
-          } else {
-            console.log('User document does not exist for UID:', user.uid);
-            // Handle case where user document doesn't exist
-            // This could happen if user registration didn't complete properly
-            await AsyncStorage.setItem('@user', JSON.stringify(user));
-            if (navigationRef.current) {
-              navigationRef.current.navigate('RoleSelection');
-            }
-          }
-        } catch (error) {
-          console.error('Error in auth state change handler:', {
-            error: error.message,
-            stack: error.stack,
-            userUid: user?.uid,
-          });
-
-          // Set a default user type or handle the error appropriately
-          setUserType(null);
-          try {
-            await AsyncStorage.multiRemove(['@user', '@userType']);
-          } catch (storageError) {
-            console.error('Error clearing storage on error:', storageError);
-          }
-          if (navigationRef.current) {
-            navigationRef.current.navigate('Login');
-          }
-        }
+      if (docExists) {
+        const userData = userDoc.data();
+        console.log('Retrieved user data:', { uid, userData });
+        
+        // Ensure userType is always set, default to 'shipper' if not specified
+        return {
+          ...userData,
+          userType: userData.userType || 'shipper'
+        };
       } else {
-        // User is signed out
-        console.log('User signed out');
-        setUser(null);
-        setUserType(null);
-        // Clear storage on sign out
-        try {
-          await AsyncStorage.multiRemove(['@user', '@userType']);
-        } catch (storageError) {
-          console.error('Error clearing storage on sign out:', storageError);
-        }
+        console.error('User document does not exist for UID:', uid);
+        return null;
       }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-
-    return unsubscribe;
-  }, []);
-
-  // Save user data to Firestore
-  const saveUserToFirestore = async (uid, userData) => {
-    const db = getFirestore();
-    const userRef = doc(db, 'users', uid);
-
-    await setDoc(
-      userRef,
-      {
-        ...userData,
-        updatedAt: serverTimestamp(),
-      },
-      {merge: true},
-    );
-
-    return true;
+    } catch (error) {
+      console.error('Error getting user data from Firestore:', error);
+      return null;
+    }
   };
 
-  // Sign up function for both shipper and driver
-  const signUp = async (email, password, userData, type) => {
+  // Sign up function
+  const signUp = async (email, password, userData) => {
     try {
       setLoading(true);
+      console.log('Starting sign up process for:', email);
 
-      // Create user with email and password using the auth instance
-      const userCredential = await auth().createUserWithEmailAndPassword(
-        email,
-        password,
-      );
-      const {user} = userCredential;
+      // Create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const { user } = userCredential;
 
       if (!user) {
-        throw new Error('User creation failed');
+        throw new Error('Failed to create user account');
       }
 
-      // Prepare user data for Firestore
-      const displayName =
-        userData.businessName ||
-        `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
-      const userProfile = {
-        uid: user.uid,
-        email: user.email,
-        userType: type,
-        displayName,
+      // Create user document in Firestore
+      const userDoc = {
         ...userData,
+        email: user.email,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        // Ensure userType is set, default to 'shipper' if not provided
+        userType: userData.userType || 'shipper'
       };
 
-      // Save user data to Firestore
-      await saveUserToFirestore(user.uid, userProfile);
-
-      // Update user profile with display name
-      await user.updateProfile({
-        displayName,
-      });
-
-      // Create a clean user object with updated profile
-      const updatedUser = {
-        ...user,
-        ...userProfile,
-      };
+      await setDoc(doc(db, 'users', user.uid), userDoc);
 
       // Update local state
+      const updatedUser = {
+        ...user,
+        ...userDoc
+      };
+
       setUser(updatedUser);
-      setUserType(type);
+      setUserType(userDoc.userType);
 
       // Save to AsyncStorage
       await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
-      await AsyncStorage.setItem('@userType', type);
+      await AsyncStorage.setItem('@userType', userDoc.userType);
 
       return {
         success: true,
         user: updatedUser,
-        userType: type,
+        userType: userDoc.userType
       };
     } catch (error) {
       console.error('Sign up error:', error);
+      // If user was created but Firestore failed, delete the user
+      if (auth.currentUser) {
+        try {
+          await deleteUser(auth.currentUser);
+        } catch (deleteError) {
+          console.error('Error cleaning up user after failed signup:', deleteError);
+        }
+      }
+      
       return {
         success: false,
-        error: getAuthErrorMessage(error.code),
+        error: getAuthErrorMessage(error.code) || 'Failed to create account. Please try again.'
       };
     } finally {
       setLoading(false);
     }
-  };
-
-  // Get user data from Firestore
-  const getUserDataFromFirestore = async uid => {
-    const db = getFirestore();
-    const userDoc = await getDoc(doc(db, 'users', uid));
-
-    if (!userDoc.exists()) {
-      throw new Error('User document not found');
-    }
-
-    return userDoc.data();
   };
 
   // Sign in function
   const signIn = async (email, password) => {
     try {
       setLoading(true);
+      console.log('Starting sign in process for:', email);
 
-      // Sign in with email and password using the auth instance
-      const userCredential = await auth().signInWithEmailAndPassword(
-        email,
-        password,
-      );
-      const {user} = userCredential;
+      // Clear any existing auth state
+      try {
+        await AsyncStorage.multiRemove(['@user', '@userType']);
+      } catch (storageError) {
+        console.warn('Error clearing storage before sign in:', storageError);
+      }
+      
+      // Clear any existing user state
+      setUser(null);
+      setUserType(null);
+
+      console.log('Attempting to sign in with Firebase...');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      const { user } = userCredential;
+      console.log('Firebase auth successful, user:', user ? user.uid : 'no user');
 
       if (!user) {
         throw new Error('No user returned from authentication');
       }
 
+      // Get user data from Firestore
+      console.log('Fetching user data from Firestore for UID:', user.uid);
+      const userData = await getUserDataFromFirestore(user.uid);
+      
+      if (!userData) {
+        console.error('No user data found in Firestore for UID:', user.uid);
+        await firebaseSignOut(auth);
+        throw new Error('User data not found. Please contact support.');
+      }
+      
+      const userType = userData.userType || 'shipper';
+      console.log('User type determined as:', userType);
+
+      // Create updated user object with profile data
+      const updatedUser = {
+        ...user,
+        ...userData,
+        displayName: userData.displayName || user.displayName || email.split('@')[0],
+      };
+
+      // Update local state
+      console.log('Updating local state with user data');
+      setUser(updatedUser);
+      setUserType(userType);
+
+      // Save to AsyncStorage
       try {
-        // Get user data from Firestore
-        const userData = await getUserDataFromFirestore(user.uid);
-        const userType = userData.userType || 'shipper'; // Default to shipper if not set
-
-        // Create updated user object with profile data
-        const updatedUser = {
-          ...user,
-          ...userData,
-          displayName:
-            userData.displayName || user.displayName || email.split('@')[0],
-        };
-
-        // Update local state
-        setUser(updatedUser);
-        setUserType(userType);
-
-        // Save to AsyncStorage
+        console.log('Saving user data to AsyncStorage');
         await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
         await AsyncStorage.setItem('@userType', userType);
-
-        return {
-          success: true,
-          user: updatedUser,
-          userType,
-        };
-      } catch (firestoreError) {
-        console.error('Firestore error during sign in:', firestoreError);
-        const minimalUser = {
-          ...user,
-          displayName: user.displayName || email.split('@')[0],
-        };
-
-        setUser(minimalUser);
-        await AsyncStorage.setItem('@user', JSON.stringify(minimalUser));
-
-        return {
-          success: true,
-          user: minimalUser,
-          userType: 'shipper', // Default user type
-          warning: 'Limited functionality: Could not load full user profile',
-        };
+      } catch (storageError) {
+        console.error('Error saving to AsyncStorage:', storageError);
+        // Don't fail the login if storage fails
       }
+
+      // Return success with user data - navigation will be handled by the auth state listener
+      return {
+        success: true,
+        user: updatedUser,
+        userType,
+      };
     } catch (error) {
       console.error('Sign in error:', error);
+      
+      // Clear any partial state on error
+      setUser(null);
+      setUserType(null);
+      try {
+        await AsyncStorage.multiRemove(['@user', '@userType']);
+      } catch (storageError) {
+        console.error('Error clearing storage on sign in error:', storageError);
+      }
+      
       return {
         success: false,
-        error:
-          getAuthErrorMessage(error.code) ||
-          'Failed to sign in. Please try again.',
+        error: error.message || 'Failed to sign in. Please try again.'
       };
     } finally {
       setLoading(false);
     }
   };
 
-  // Password reset function
-  const resetPassword = async email => {
+  // Super simple sign out - just clear everything and go to onboarding
+  const signOut = async () => {
+    // Clear local state
+    setUser(null);
+    setUserType(null);
+    
+    // Clear storage (don't wait for it)
+    AsyncStorage.multiRemove(['@user', '@userType'])
+      .then(() => console.log('App data cleared'))
+      .catch(err => console.log('Error clearing data:', err));
+    
+    // Navigate to onboarding
+    if (navigationRef.current) {
+      navigationRef.current.reset({
+        index: 0,
+        routes: [{ name: 'Onboarding' }],
+      });
+    }
+    
+    // Always return success - we don't care about errors
+    return { success: true };
+  };
+
+  // Update user profile
+  const updateProfile = async (userData) => {
+    try {
+      if (user) {
+        // Update in Firestore
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, userData, { merge: true });
+        
+        // Update local state
+        const updatedUser = { ...user, ...userData };
+        setUser(updatedUser);
+        
+        // Update AsyncStorage
+        await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
+        
+        return { success: true };
+      }
+      return { success: false, error: 'No user is currently logged in' };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Get user data from Firestore
+  const getUserData = async () => {
+    try {
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+        if (userDoc.exists()) {
+          return { success: true, data: userDoc.data() };
+        }
+      }
+      return { success: false, error: 'User not found' };
+    } catch (error) {
+      console.error('Get user data error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Reset password
+  const resetPassword = async (email) => {
     try {
       if (!email || !email.trim()) {
         throw new Error('Email is required');
@@ -329,62 +340,19 @@ export const AuthProvider = ({children}) => {
 
       return {
         success: true,
-        message:
-          'Password reset email sent successfully. Please check your inbox.',
+        message: 'Password reset email sent successfully. Please check your inbox.',
       };
     } catch (error) {
       console.error('Password reset error:', error);
       return {
         success: false,
-        error:
-          getAuthErrorMessage(error.code) ||
-          'Failed to send password reset email. Please try again.',
+        error: getAuthErrorMessage(error.code) || 'Failed to send password reset email. Please try again.',
       };
     }
   };
 
-  // Update user profile
-  const updateProfile = async userData => {
-    try {
-      if (user) {
-        await getFirestore()
-          .collection('users')
-          .doc(user.uid)
-          .update({
-            ...userData,
-            updatedAt: serverTimestamp(),
-          });
-        return {success: true};
-      }
-      return {success: false, error: 'No user logged in'};
-    } catch (error) {
-      console.error('Update profile error:', error);
-      return {success: false, error: error.message};
-    }
-  };
-
-  // Get user data from Firestore
-  const getUserData = async () => {
-    try {
-      if (user) {
-        const userDoc = await getFirestore()
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-        if (userDoc.exists) {
-          return {success: true, data: userDoc.data()};
-        }
-      }
-      return {success: false, error: 'User not found'};
-    } catch (error) {
-      console.error('Get user data error:', error);
-      return {success: false, error: error.message};
-    }
-  };
-
   // Helper function to get readable error messages
-  const getAuthErrorMessage = errorCode => {
+  const getAuthErrorMessage = (errorCode) => {
     switch (errorCode) {
       case 'auth/email-already-in-use':
         return 'This email address is already registered. Please use a different email or try signing in.';
@@ -411,21 +379,102 @@ export const AuthProvider = ({children}) => {
     }
   };
 
-  // Check if user is authenticated
-  const isAuthenticated = !!user && !!userType;
+  // Set up auth state listener (simplified)
+  useEffect(() => {
+    let isMounted = true;
+    
+    const handleAuthStateChange = async (currentUser) => {
+      try {
+        if (!isMounted) return;
+        
+        if (currentUser) {
+          // User is signed in
+          console.log('Auth state: User is signed in');
+          
+          // Get user data from Firestore
+          const userData = await getUserDataFromFirestore(currentUser.uid);
+          
+          if (!isMounted) return;
+          
+          if (userData) {
+            const userType = userData.userType || 'shipper';
+            console.log('User data retrieved, type:', userType);
+            
+            // Create updated user object with profile data
+            const updatedUser = {
+              ...currentUser,
+              ...userData,
+              displayName: userData.displayName || currentUser.displayName || currentUser.email?.split('@')[0],
+            };
+            
+            // Update state
+            setUser(updatedUser);
+            setUserType(userType);
+            
+            // Save to AsyncStorage
+            try {
+              await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
+              await AsyncStorage.setItem('@userType', userType);
+            } catch (storageError) {
+              console.error('Error saving to AsyncStorage:', storageError);
+            }
+          } else {
+            // User document doesn't exist in Firestore
+            console.log('No user data found, signing out...');
+            await signOut();
+          }
+        } else {
+          // User is signed out - we don't need to do anything here
+          // as the signOut function already handles everything
+          console.log('User signed out');
+        }
+      } catch (error) {
+        console.error('Error in auth state change handler:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          setInitializing(false);
+        }
+      }
+    };
+    
+    // Subscribe to auth state changes
+    const unsubscribe = onAuthStateChanged(auth, handleAuthStateChange);
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      if (navigationTimeout) {
+        clearTimeout(navigationTimeout);
+      }
+      unsubscribe();
+    };
+  }, []);
 
-  const value = {
+  // Set up navigation reference
+  const setNavigation = (navRef) => {
+    navigationRef.current = navRef;
+  };
+
+  // Create the context value object
+  const contextValue = {
     user,
     userType,
-    loading: loading || initializing,
-    isAuthenticated,
-    signUp,
+    loading,
+    initializing,
     signIn,
+    signUp, // Use our custom signUp function
+    signOut,
     resetPassword,
     updateProfile,
     getUserData,
-    setNavigation,
+    getAuthErrorMessage,
+    setNavigation // Add setNavigation to context
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
