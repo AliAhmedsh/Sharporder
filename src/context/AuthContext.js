@@ -264,25 +264,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Super simple sign out - just clear everything and go to onboarding
+  // Sign out function - properly call Firebase signOut and clear local state
   const signOut = async () => {
+    try {
+      // Sign out from Firebase first
+      await firebaseSignOut(auth);
+      console.log('Firebase sign out successful');
+    } catch (error) {
+      console.error('Firebase sign out error:', error);
+      // Continue with local cleanup even if Firebase sign out fails
+    }
+
     // Clear local state
     setUser(null);
     setUserType(null);
-    
+
     // Clear storage (don't wait for it)
     AsyncStorage.multiRemove(['@user', '@userType'])
       .then(() => console.log('App data cleared'))
       .catch(err => console.log('Error clearing data:', err));
-    
-    // Navigate to onboarding
+
+    // Navigate to login screen
     if (navigationRef.current) {
       navigationRef.current.reset({
         index: 0,
-        routes: [{ name: 'Onboarding' }],
+        routes: [{ name: 'Login' }],
       });
     }
-    
+
     // Always return success - we don't care about errors
     return { success: true };
   };

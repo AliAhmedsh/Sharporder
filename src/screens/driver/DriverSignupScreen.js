@@ -122,10 +122,58 @@ const DriverSignupScreen = ({ navigation }) => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleNext = () => {
-    if (currentStep === 1 && validatePersonalDetails()) {
-      setCurrentStep(2);
+  const validateForm = () => {
+    const errors = {};
+
+    // Validate personal details
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required';
     }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    }
+
+    if (!formData.dateOfBirth.trim()) {
+      errors.dateOfBirth = 'Date of birth is required';
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      errors.phoneNumber = 'Phone number is required';
+    } else if (formData.phoneNumber.length < 10) {
+      errors.phoneNumber = 'Please enter a valid phone number';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.truckType.trim()) {
+      errors.truckType = 'Please select a truck type';
+    }
+
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    // Validate license number
+    if (!formData.licenseNumber.trim()) {
+      errors.licenseNumber = 'License number is required';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSignUp = async () => {
@@ -134,20 +182,8 @@ const DriverSignupScreen = ({ navigation }) => {
     }
 
     try {
-      setLoading(true);
-      
-      // Create user with email and password
-      const userCredential = await auth().createUserWithEmailAndPassword(
-        formData.email.trim(),
-        formData.password
-      );
-      
-      const { uid, email } = userCredential.user;
-      
-      // Add driver data to Firestore
+      // Create user data object
       const userData = {
-        uid,
-        email,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         phoneNumber: formData.phoneNumber.trim(),
@@ -155,52 +191,36 @@ const DriverSignupScreen = ({ navigation }) => {
         truckType: formData.truckType,
         licenseNumber: formData.licenseNumber.trim(),
         userType: 'driver',
-        status: 'pending_verification',
-        profileComplete: false,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`
       };
-      
-      await firestore().collection('users').doc(uid).set(userData);
-      
-      // Show success message and navigate to driver dashboard
-      Alert.alert(
-        'Success',
-        'Your driver account has been created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to DriverApp which is the root of the driver stack
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'DriverApp' }],
-              });
+
+      // Use AuthContext's signUp function
+      const result = await signUp(formData.email.trim(), formData.password, userData);
+
+      if (result.success) {
+        // Show success message
+        Alert.alert(
+          'Success',
+          'Your driver account has been created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate to DriverApp which is the root of the driver stack
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'DriverApp' }],
+                });
+              },
             },
-          },
-        ]
-      );
-      
+          ]
+        );
+      } else {
+        Alert.alert('Registration Failed', result.error || 'An error occurred during registration. Please try again.');
+      }
     } catch (error) {
       console.error('Registration error:', error);
-      let errorMessage = 'An error occurred during registration. Please try again.';
-      
-      // Handle common Firebase auth errors
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'An account with this email already exists.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'The email address is not valid.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'The password is too weak. Please choose a stronger password.';
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = 'Email/password accounts are not enabled.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Registration Failed', errorMessage);
-    } finally {
-      setLoading(false);
+      Alert.alert('Registration Failed', 'An error occurred during registration. Please try again.');
     }
   };
 

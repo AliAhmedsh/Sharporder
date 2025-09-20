@@ -19,7 +19,6 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import auth from '@react-native-firebase/auth';
 
 import MapView from 'react-native-maps';
 import DeliveryDetailsScreen from './DeliveryDetailsScreen';
@@ -32,6 +31,8 @@ import shipments from '../../assets/icons/shipments.png';
 import loadboard from '../../assets/icons/loadboard.png';
 import search from '../../assets/icons/search.png';
 // import logout from '../../assets/icons/logout.png';
+
+import { useAuth } from '../../context/AuthContext';
 
 const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSuggestionPress }) => {
   const suggestions = ['Home', 'Office', 'Warehouse', 'Airport', 'Mall', 'Harbor', 'Central Park'];
@@ -77,16 +78,15 @@ const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSugge
 const { height, width: screenWidth } = Dimensions.get('window');
 
 const DashboardScreen = ({ navigation }) => {
+  const { signOut } = useAuth();
+
   const handleLogout = async () => {
     try {
-      await auth().signOut();
-      // Clear any local storage if needed
-      await AsyncStorage.multiRemove(['@user', '@userType']);
-      // Navigate to login screen
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      const result = await signOut();
+      if (result.success) {
+        // Navigation is handled by AuthContext
+        console.log('Logout successful');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to sign out. Please try again.');
       console.error('Logout error:', error);
