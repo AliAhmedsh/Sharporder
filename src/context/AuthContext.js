@@ -428,9 +428,55 @@ export const AuthProvider = ({ children }) => {
               console.error('Error saving to AsyncStorage:', storageError);
             }
           } else {
-            // User document doesn't exist in Firestore
-            console.log('No user data found, signing out...');
-            await signOut();
+            // User document doesn't exist in Firestore yet. This can happen right after sign up
+            // due to eventual consistency. We'll retry once after a short delay and then fall back
+            // to AsyncStorage/currentUser without signing the user out.
+            console.log('No user data found, retrying fetch...');
+            await new Promise(res => setTimeout(res, 1200));
+            const retryData = await getUserDataFromFirestore(currentUser.uid);
+
+            if (!isMounted) return;
+
+            if (retryData) {
+              const userType = retryData.userType || 'shipper';
+              const updatedUser = {
+                ...currentUser,
+                ...retryData,
+                displayName: retryData.displayName || currentUser.displayName || currentUser.email?.split('@')[0],
+              };
+              setUser(updatedUser);
+              setUserType(userType);
+              try {
+                await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
+                await AsyncStorage.setItem('@userType', userType);
+              } catch (storageError) {
+                console.error('Error saving to AsyncStorage after retry:', storageError);
+              }
+            } else {
+              console.log('No user data found after retry, keeping user signed in with fallback data.');
+              try {
+                const storedUserJSON = await AsyncStorage.getItem('@user');
+                const storedUserType = await AsyncStorage.getItem('@userType');
+                const storedUser = storedUserJSON ? JSON.parse(storedUserJSON) : null;
+
+                const fallbackUser = storedUser || {
+                  ...currentUser,
+                  displayName: currentUser.displayName || currentUser.email?.split('@')[0],
+                };
+                const fallbackUserType = storedUserType || fallbackUser.userType || 'shipper';
+
+                setUser(fallbackUser);
+                setUserType(fallbackUserType);
+              } catch (fallbackErr) {
+                console.error('Error applying fallback user state:', fallbackErr);
+                // As a last resort, at least set the basic currentUser
+                setUser({
+                  ...currentUser,
+                  displayName: currentUser.displayName || currentUser.email?.split('@')[0],
+                });
+                setUserType('shipper');
+              }
+            }
           }
         } else {
           // User is signed out - we don't need to do anything here
@@ -453,9 +499,6 @@ export const AuthProvider = ({ children }) => {
     // Cleanup function
     return () => {
       isMounted = false;
-      if (navigationTimeout) {
-        clearTimeout(navigationTimeout);
-      }
       unsubscribe();
     };
   }, []);

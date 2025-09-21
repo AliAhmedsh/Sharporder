@@ -21,7 +21,7 @@ import MapView from 'react-native-maps';
 import hamburger from '../../assets/icons/hamburger.png';
 import headset from '../../assets/icons/headset.png';
 import help from '../../assets/icons/help.png';
-// import logout from '../../assets/icons/logout.png';
+import logout from '../../assets/icons/logout.png';
 import wallet from '../../assets/icons/wallet.png';
 import trips from '../../assets/icons/trips.png';
 import loadboard from '../../assets/icons/loadboard.png';
@@ -496,7 +496,7 @@ const DriverDashboardScreen = ({ navigation }) => {
               { 
                 id: 'logout', 
                 title: 'Logout', 
-                icon: 'x',
+                icon: logout,
                 onPress: handleLogout,
                 isLogout: true
               },

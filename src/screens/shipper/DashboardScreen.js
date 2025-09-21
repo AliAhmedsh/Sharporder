@@ -30,7 +30,7 @@ import payments from '../../assets/icons/payments.png';
 import shipments from '../../assets/icons/shipments.png';
 import loadboard from '../../assets/icons/loadboard.png';
 import search from '../../assets/icons/search.png';
-// import logout from '../../assets/icons/logout.png';
+import logout from '../../assets/icons/logout.png';
 
 import { useAuth } from '../../context/AuthContext';
 
@@ -388,7 +388,7 @@ const DashboardScreen = ({ navigation }) => {
               { 
                 id: 'logout', 
                 title: 'Logout', 
-                icon: 'x',
+                icon: logout,
                 onPress: handleLogout,
                 isLogout: true
               },

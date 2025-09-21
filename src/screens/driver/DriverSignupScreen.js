@@ -21,13 +21,14 @@ import calender from '../../assets/icons/calender.png';
 import camera from '../../assets/icons/camera.png';
 
 const DriverSignupScreen = ({ navigation }) => {
-  const { signUp, loading } = useAuth();
+  const { signUp } = useAuth();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -57,6 +58,12 @@ const DriverSignupScreen = ({ navigation }) => {
       setCurrentStep(currentStep - 1);
     } else {
       navigation.goBack();
+    }
+  };
+
+  const handleNext = () => {
+    if (validatePersonalDetails()) {
+      setCurrentStep(2);
     }
   };
 
@@ -182,6 +189,7 @@ const DriverSignupScreen = ({ navigation }) => {
     }
 
     try {
+      setSubmitting(true);
       // Create user data object
       const userData = {
         firstName: formData.firstName.trim(),
@@ -198,29 +206,19 @@ const DriverSignupScreen = ({ navigation }) => {
       const result = await signUp(formData.email.trim(), formData.password, userData);
 
       if (result.success) {
-        // Show success message
-        Alert.alert(
-          'Success',
-          'Your driver account has been created successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate to DriverApp which is the root of the driver stack
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'DriverApp' }],
-                });
-              },
-            },
-          ]
-        );
+        // Smoothly navigate to dashboard/root without blocking alerts
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'DriverApp' }],
+        });
       } else {
         Alert.alert('Registration Failed', result.error || 'An error occurred during registration. Please try again.');
       }
     } catch (error) {
       console.error('Registration error:', error);
       Alert.alert('Registration Failed', 'An error occurred during registration. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -277,7 +275,7 @@ const DriverSignupScreen = ({ navigation }) => {
             placeholderTextColor="#C7C7CD"
             value={formData.firstName}
             onChangeText={(value) => handleInputChange('firstName', value)}
-            editable={!loading}
+            editable={!submitting}
           />
           {renderInputError('firstName')}
         </View>
@@ -293,7 +291,7 @@ const DriverSignupScreen = ({ navigation }) => {
             placeholderTextColor="#C7C7CD"
             value={formData.lastName}
             onChangeText={(value) => handleInputChange('lastName', value)}
-            editable={!loading}
+            editable={!submitting}
           />
           {renderInputError('lastName')}
         </View>
@@ -311,9 +309,9 @@ const DriverSignupScreen = ({ navigation }) => {
               placeholderTextColor="#C7C7CD"
               value={formData.dateOfBirth}
               onChangeText={(value) => handleInputChange('dateOfBirth', value)}
-              editable={!loading}
+              editable={!submitting}
             />
-            <TouchableOpacity style={styles.iconButton} disabled={loading}>
+            <TouchableOpacity style={styles.iconButton} disabled={submitting}>
               <Image source={calender} style={styles.inputCalenderImage} />
             </TouchableOpacity>
           </View>
@@ -334,7 +332,7 @@ const DriverSignupScreen = ({ navigation }) => {
               value={formData.phoneNumber}
               onChangeText={(value) => handleInputChange('phoneNumber', value)}
               keyboardType="phone-pad"
-              editable={!loading}
+              editable={!submitting}
             />
           </View>
           {renderInputError('phoneNumber')}
@@ -353,7 +351,7 @@ const DriverSignupScreen = ({ navigation }) => {
             onChangeText={(value) => handleInputChange('email', value)}
             keyboardType="email-address"
             autoCapitalize="none"
-            editable={!loading}
+            editable={!submitting}
           />
           {renderInputError('email')}
         </View>
@@ -366,7 +364,7 @@ const DriverSignupScreen = ({ navigation }) => {
               validationErrors.truckType && styles.inputError
             ]}
             onPress={showTruckTypePicker}
-            disabled={loading}
+            disabled={submitting}
           >
             <Text style={[styles.dropdownText, !formData.truckType && styles.placeholderText]}>
               {formData.truckType || 'Select here'}
@@ -390,12 +388,12 @@ const DriverSignupScreen = ({ navigation }) => {
               value={formData.password}
               onChangeText={(value) => handleInputChange('password', value)}
               secureTextEntry={!showPassword}
-              editable={!loading}
+              editable={!submitting}
             />
             <TouchableOpacity 
               onPress={() => setShowPassword(!showPassword)}
               style={styles.iconButton}
-              disabled={loading}
+              disabled={submitting}
             >
               <Image source={eye} style={styles.inputIconImage} />
             </TouchableOpacity>
@@ -417,12 +415,12 @@ const DriverSignupScreen = ({ navigation }) => {
               value={formData.confirmPassword}
               onChangeText={(value) => handleInputChange('confirmPassword', value)}
               secureTextEntry={!showConfirmPassword}
-              editable={!loading}
+              editable={!submitting}
             />
             <TouchableOpacity 
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               style={styles.iconButton}
-              disabled={loading}
+              disabled={submitting}
             >
               <Image source={eye} style={styles.inputIconImage} />
             </TouchableOpacity>
@@ -434,16 +432,12 @@ const DriverSignupScreen = ({ navigation }) => {
       <TouchableOpacity 
         style={[
           styles.nextButton,
-          loading && styles.buttonDisabled
+          submitting && styles.buttonDisabled
         ]} 
         onPress={handleNext}
-        disabled={loading}
+        disabled={submitting}
       >
-        {loading ? (
-          <ActivityIndicator color="#ffffff" size="small" />
-        ) : (
-          <Text style={styles.nextButtonText}>NEXT</Text>
-        )}
+        <Text style={styles.nextButtonText}>NEXT</Text>
       </TouchableOpacity>
     </View>
   );
@@ -463,7 +457,7 @@ const DriverSignupScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.photoContainer}>
-          <TouchableOpacity style={styles.photoPlaceholder} disabled={loading}>
+          <TouchableOpacity style={styles.photoPlaceholder} disabled={submitting}>
             <Image source={camera} style={styles.cameraIcon} />
           </TouchableOpacity>
       </View>
@@ -476,7 +470,7 @@ const DriverSignupScreen = ({ navigation }) => {
 
         <View style={styles.documentInputGroup}>
           <Text style={styles.inputLabel}>Driver's licence</Text>
-          <TouchableOpacity style={styles.uploadField} disabled={loading}>
+          <TouchableOpacity style={styles.uploadField} disabled={submitting}>
             <Text style={styles.uploadText}>Upload here</Text>
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
@@ -490,13 +484,13 @@ const DriverSignupScreen = ({ navigation }) => {
             placeholderTextColor="#C7C7CD"
             value={formData.licenseNumber}
             onChangeText={(value) => handleInputChange('licenseNumber', value)}
-            editable={!loading}
+            editable={!submitting}
           />
         </View>
 
         <View style={styles.documentInputGroup}>
           <Text style={styles.inputLabel}>Photo of truck</Text>
-          <TouchableOpacity style={styles.uploadField} disabled={loading}>
+          <TouchableOpacity style={styles.uploadField} disabled={submitting}>
             <Text style={styles.uploadText}>Upload here</Text>
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
@@ -506,12 +500,12 @@ const DriverSignupScreen = ({ navigation }) => {
       <TouchableOpacity 
         style={[
           styles.nextButton,
-          loading && styles.buttonDisabled
+          submitting && styles.buttonDisabled
         ]} 
         onPress={handleSignUp}
-        disabled={loading}
+        disabled={submitting}
       >
-        {loading ? (
+        {submitting ? (
           <ActivityIndicator color="#ffffff" size="small" />
         ) : (
           <Text style={styles.nextButtonText}>CREATE ACCOUNT</Text>
