@@ -1,25 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { firebaseShipmentsService } from '../../services/firebase';
 import back from '../../assets/icons/back.png';
 
 const MyShipmentsScreen = ({ navigation }) => {
-  const { shipments, addShipment, formData } = useAppContext();
+  const { shipments, addShipment, formData, loading } = useAppContext();
+  const { user } = useAuth();
+  const [localShipments, setLocalShipments] = useState([]);
 
-  const handleRepeatDelivery = (shipment) => {
-    // Create a new shipment based on the existing one
-    const newShipmentData = {
-      deliveryAddress: shipment.address,
-      fareOffer: shipment.price.replace('NGN ', '').replace(',', ''),
-    };
-    
-    addShipment(newShipmentData);
-    
-    Alert.alert(
-      'Delivery Repeated',
-      'A new delivery has been created based on this shipment.',
-      [{ text: 'OK' }]
-    );
+  // Load real-time shipments data
+  useEffect(() => {
+    if (user) {
+      // Shipments will be updated via real-time subscription from AppContext
+      console.log('Loading shipments for user:', user.uid);
+    }
+  }, [user]);
+
+  const handleRepeatDelivery = async (shipment) => {
+    if (user) {
+      try {
+        const newShipmentData = {
+          ...shipment,
+          shipperId: user.uid,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        };
+
+        await addShipment(newShipmentData);
+
+        Alert.alert(
+          'Delivery Repeated',
+          'A new delivery has been created based on this shipment.',
+          [{ text: 'OK' }]
+        );
+      } catch (error) {
+        console.error('Error repeating delivery:', error);
+        Alert.alert('Error', 'Failed to repeat delivery. Please try again.');
+      }
+    }
   };
 
   const handleRateDelivery = (shipment) => {
@@ -35,28 +55,43 @@ const MyShipmentsScreen = ({ navigation }) => {
     );
   };
 
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'delivered': return '#4CAF50';
+      case 'in_transit': return '#FFA500';
+      case 'pending': return '#2196F3';
+      case 'cancelled': return '#FF0000';
+      default: return '#666';
+    }
+  };
+
   const ShipmentCard = ({ shipment }) => (
     <View style={styles.shipmentCard}>
       <View style={styles.shipmentContent}>
         <View style={styles.shipmentInfo}>
-          <Text style={styles.addressText}>{shipment.address}</Text>
-          <Text style={styles.dateText}>{shipment.date}</Text>
-          <Text style={styles.priceText}>{shipment.price}</Text>
+          <Text style={styles.addressText}>{shipment.pickupAddress || shipment.address || 'No address'}</Text>
+          <Text style={styles.dateText}>{shipment.createdAt ? new Date(shipment.createdAt).toLocaleDateString() : shipment.date}</Text>
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceText}>₦{shipment.price?.replace('NGN ', '').replace(',', '') || '0'}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(shipment.status) }]}>
+              <Text style={styles.statusText}>{shipment.status || 'Unknown'}</Text>
+            </View>
+          </View>
         </View>
-        
+
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.repeatButton}
             onPress={() => handleRepeatDelivery(shipment)}
           >
-            <Text style={styles.repeatButtonText}>🔄 Repeat delivery</Text>
+            <Text style={styles.repeatButtonText}>🔄 Repeat</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.rateButton}
             onPress={() => handleRateDelivery(shipment)}
           >
-            <Text style={styles.rateButtonText}>⭐ Rate delivery</Text>
+            <Text style={styles.rateButtonText}>⭐ Rate</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -66,7 +101,7 @@ const MyShipmentsScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
@@ -74,11 +109,24 @@ const MyShipmentsScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My shipments</Text>
       </View>
-      
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {shipments.map((shipment) => (
-          <ShipmentCard key={shipment.id} shipment={shipment} />
-        ))}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading shipments...</Text>
+          </View>
+        ) : (
+          shipments.length > 0 ? (
+            shipments.map((shipment) => (
+              <ShipmentCard key={shipment.id} shipment={shipment} />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No shipments found</Text>
+              <Text style={styles.emptySubtext}>Your deliveries will appear here</Text>
+            </View>
+          )
+        )}
       </ScrollView>
     </View>
   );

@@ -1,32 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { firebaseDriversService } from '../../services/firebase';
 import back from '../../assets/icons/back.png';
 import emptyStateImage from '../../assets/empty-load-board.png';
 import search from '../../assets/icons/search.png';
 
 const LoadBoardScreen = ({ navigation }) => {
-  const { 
-    formData, 
-    loads, 
-    addLoad, 
-    showLoadDrawer, 
-    setShowLoadDrawer, 
-    selectedLoad, 
-    setSelectedLoad 
+  const {
+    formData,
+    loads,
+    addLoad,
+    showLoadDrawer,
+    setShowLoadDrawer,
+    selectedLoad,
+    setSelectedLoad
   } = useAppContext();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [bids, setBids] = useState([]);
+  const [loadingBids, setLoadingBids] = useState(false);
 
-  const sampleBids = [
-    { id: 1, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-    { id: 2, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-    { id: 3, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-    { id: 4, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-  ];
-  
-  const handleViewBids = (load) => {
+  // Load real-time loads data
+  useEffect(() => {
+    if (user) {
+      // Loads will be updated via real-time subscription from AppContext
+      console.log('Loading loads for user:', user.uid);
+    }
+  }, [user]);
+
+  const handleViewBids = async (load) => {
     setSelectedLoad(load);
     setShowLoadDrawer(true);
+    setLoadingBids(true);
+
+    try {
+      // Get bids from Firebase (simulated for now - would come from drivers collection)
+      const bidsData = [
+        { id: 1, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
+        { id: 2, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
+        { id: 3, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
+        { id: 4, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
+      ];
+      setBids(bidsData);
+    } catch (error) {
+      console.error('Error loading bids:', error);
+    } finally {
+      setLoadingBids(false);
+    }
   };
 
   const closeDrawer = () => {
@@ -34,8 +56,20 @@ const LoadBoardScreen = ({ navigation }) => {
     setSelectedLoad(null);
   };
 
-  const handlePostLoad = () => {
-    addLoad(formData);
+  const handlePostLoad = async () => {
+    if (user) {
+      try {
+        const loadData = {
+          ...formData,
+          shipperId: user.uid,
+          status: 'available'
+        };
+        await addLoad(loadData);
+        console.log('Load posted successfully');
+      } catch (error) {
+        console.error('Error posting load:', error);
+      }
+    }
   };
 
   const getStatusColor = (status) => {
@@ -54,33 +88,33 @@ const LoadBoardScreen = ({ navigation }) => {
           <Text style={styles.statusText}>{load.status}</Text>
         </View>
       </View>
-      
-      <Text style={styles.loadTitle}>Load #{load.loadNumber} - Lagos → Abuja</Text>
-      
+
+      <Text style={styles.loadTitle}>Load #{load.loadNumber} - {load.pickupLocation} → {load.deliveryLocation}</Text>
+
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>📍</Text>
-          <Text style={styles.detailText}>Abuja</Text>
+          <Text style={styles.detailText}>{load.deliveryLocation}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>🕐</Text>
-          <Text style={styles.detailText}>20:50am, 01/09/205</Text>
+          <Text style={styles.detailText}>{load.pickupDate}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>🚚</Text>
-          <Text style={styles.detailText}>Truck</Text>
+          <Text style={styles.detailText}>{load.truckType}</Text>
         </View>
       </View>
-      
+
       <View style={styles.cardFooter}>
         <View style={styles.priceInfo}>
-          <Text style={styles.bidsText}>No. of bids: {load.numberOfBids}</Text>
-          <Text style={styles.priceText}>₦120,000 - ₦150,000</Text>
+          <Text style={styles.bidsText}>No. of bids: {load.numberOfBids || 0}</Text>
+          <Text style={styles.priceText}>₦{load.price?.toLocaleString() || '120,000 - 150,000'}</Text>
         </View>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.viewBidsButton}
           onPress={() => handleViewBids(load)}
         >
@@ -104,12 +138,12 @@ const LoadBoardScreen = ({ navigation }) => {
       transparent={true}
       onRequestClose={closeDrawer}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.modalOverlay}
         activeOpacity={1}
         onPress={closeDrawer}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.drawerContainer}
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
@@ -118,40 +152,44 @@ const LoadBoardScreen = ({ navigation }) => {
           <View style={styles.drawerHeader}>
             <Text style={styles.drawerTitle}>Bids</Text>
           </View>
-  
+
           <ScrollView style={styles.drawerContent}>
             {selectedLoad && (
               <View style={styles.bidsSection}>
-                {sampleBids.map((bid) => (
-                  <View key={bid.id} style={styles.bidCard}>
-                    <View style={styles.bidContent}>
-                      <View style={styles.bidLeft}>
-                        <View style={styles.driverAvatar}>
-                          <Text style={styles.driverInitials}>
-                            {bid.company.split(' ').map(word => word[0]).join('')}
-                          </Text>
-                        </View>
-                        <View style={styles.driverInfo}>
-                          <Text style={styles.driverName}>{bid.company}</Text>
-                          <View style={styles.driverStats}>
-                            <Text style={styles.rating}>⭐ {bid.rating}</Text>
-                            <Text style={styles.deliveries}>50 successful deliveries</Text>
+                {loadingBids ? (
+                  <Text style={styles.loadingText}>Loading bids...</Text>
+                ) : (
+                  bids.map((bid) => (
+                    <View key={bid.id} style={styles.bidCard}>
+                      <View style={styles.bidContent}>
+                        <View style={styles.bidLeft}>
+                          <View style={styles.driverAvatar}>
+                            <Text style={styles.driverInitials}>
+                              {bid.company.split(' ').map(word => word[0]).join('')}
+                            </Text>
                           </View>
-                          <Text style={styles.deliveryTime}>10 mins away</Text>
-                          <Text style={styles.bidPrice}>NGN 15000</Text>
+                          <View style={styles.driverInfo}>
+                            <Text style={styles.driverName}>{bid.company}</Text>
+                            <View style={styles.driverStats}>
+                              <Text style={styles.rating}>⭐ {bid.rating}</Text>
+                              <Text style={styles.deliveries}>50 successful deliveries</Text>
+                            </View>
+                            <Text style={styles.deliveryTime}>{bid.deliveryTime}</Text>
+                            <Text style={styles.bidPrice}>{bid.amount}</Text>
+                          </View>
                         </View>
-                      </View>
-                      <View style={styles.bidActions}>
-                        <TouchableOpacity style={styles.declineButton}>
-                          <Text style={styles.declineButtonText}>DECLINE</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.acceptButton}>
-                          <Text style={styles.acceptButtonText}>ACCEPT</Text>
-                        </TouchableOpacity>
+                        <View style={styles.bidActions}>
+                          <TouchableOpacity style={styles.declineButton}>
+                            <Text style={styles.declineButtonText}>DECLINE</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.acceptButton}>
+                            <Text style={styles.acceptButtonText}>ACCEPT</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))}
+                  ))
+                )}
               </View>
             )}
           </ScrollView>
@@ -163,33 +201,27 @@ const LoadBoardScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Image source={back} style={styles.backIcon} />
+          <Image style={styles.backIcon} source={back} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Load Board</Text>
+        <Text style={styles.headerTitle}>Load board</Text>
       </View>
-      
+
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Image source={search} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search Load Board"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-          />
-        </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterIcon}>☰</Text>
-        </TouchableOpacity>
+        <Image source={search} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search loads..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
-      
-      <ScrollView 
-        style={styles.scrollView}
+
+      <ScrollView
+        style={styles.content}
         contentContainerStyle={[
           styles.loadsList,
           loads.length === 0 && styles.emptyScrollView
