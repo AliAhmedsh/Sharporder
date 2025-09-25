@@ -18,9 +18,6 @@ import {
 } from 'react-native';
 
 import MapView from 'react-native-maps';
-import DeliveryDetailsScreen from './DeliveryDetailsScreen';
-import TripDetailsScreen from './TripDetailsScreen';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import hamburger from '../../assets/icons/hamburger.png';
 import headset from '../../assets/icons/headset.png';
 import help from '../../assets/icons/help.png';
@@ -29,6 +26,8 @@ import logout from '../../assets/icons/logout.png';
 import payments from '../../assets/icons/payments.png';
 import search from '../../assets/icons/search.png';
 import shipments from '../../assets/icons/shipments.png';
+import DeliveryDetailsScreen from './DeliveryDetailsScreen';
+import TripDetailsScreen from './TripDetailsScreen';
 
 import {useAuth} from '../../context/AuthContext';
 
@@ -174,7 +173,7 @@ const DashboardScreen = ({navigation}) => {
     longitudeDelta: 0.05,
   });
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(2);
 
   const [marker, setMarker] = useState({
     latitude: 6.5244,
@@ -277,6 +276,8 @@ const DashboardScreen = ({navigation}) => {
       useNativeDriver: true,
     }).start(() => setShowSidePanel(false));
   };
+
+  const [formData, setFormData] = useState({});
 
   return (
     <SafeAreaView style={styles.container}>
@@ -453,11 +454,15 @@ const DashboardScreen = ({navigation}) => {
         <DeliveryDetailsScreen
           visible={true}
           onClose={() => setStep(0)}
-          onContinue={() => setStep(2)}
+          onContinue={values => {
+            setFormData(values);
+            setStep(2);
+          }}
         />
       )}
       {step === 2 && (
         <TripDetailsScreen
+          formData={formData}
           visible={true}
           onClose={() => setStep(1)}
           navigation={navigation}

@@ -1,28 +1,36 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  SafeAreaView,
-  StatusBar,
-  Modal,
+  ActivityIndicator,
   Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useAppContext } from '../../context/AppContext';
-import { useAuth } from '../../context/AuthContext';
-import { firebaseLoadsService } from '../../services/firebase';
+import {useAuth} from '../../context/AuthContext';
+import {firebaseLoadsService} from '../../services/firebase';
 
-const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
-  const { formData, setFormData } = useAppContext();
-  const { user } = useAuth();
+const TripDetailsScreen = ({
+  visible,
+  onClose = () => {},
+  navigation,
+  formData,
+  setFormData = () => {},
+}) => {
+  const {user} = useAuth();
+  const [loading, setLoading] = useState(false);
 
   const handleSearchDriver = async () => {
     try {
+      setLoading(true);
       if (!user || !user.uid) {
-        Alert.alert('Not signed in', 'Please sign in to create a delivery request.');
+        Alert.alert(
+          'Not signed in',
+          'Please sign in to create a delivery request.',
+        );
         return;
       }
 
@@ -49,13 +57,21 @@ const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
       // Close modal and navigate to driver search, passing the new loadId
       onClose();
       if (navigation && navigation.navigate) {
-        navigation.navigate('DriverSearch', { loadId: created.id });
+        navigation.navigate('DriverSearch', {loadId: created.id});
       }
 
-      Alert.alert('Request created', 'Your delivery request has been posted to the load board.');
+      Alert.alert(
+        'Request created',
+        'Your delivery request has been posted to the load board.',
+      );
     } catch (err) {
       console.error('Error creating load:', err);
-      Alert.alert('Error', err.message || 'Could not create delivery request. Please try again.');
+      Alert.alert(
+        'Error',
+        err.message || 'Could not create delivery request. Please try again.',
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,36 +87,37 @@ const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalOverlay}>
         {/* Backdrop - only covers the area above the modal */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backdrop}
           activeOpacity={1}
           onPress={handleBackdropPress}
         />
-        
+
         {/* Modal Content */}
         <View style={styles.modalContainer}>
           <View style={styles.dragHandle} />
-          
-          <ScrollView 
+
+          <ScrollView
             style={styles.formContainer}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             bounces={true}
-            keyboardShouldPersistTaps="handled"
-          >
+            keyboardShouldPersistTaps="handled">
             <Text style={styles.pageTitle}>Trip details</Text>
 
             <View style={styles.tripDetailCard}>
               <Text style={styles.inputLabel}>Pickup address</Text>
               <Text style={styles.addressText}>
-                {formData.pickupAddress || '15 Bode Thomas Street, Surulere, Lagos'}
+                {formData.pickupAddress ||
+                  '15 Bode Thomas Street, Surulere, Lagos'}
               </Text>
             </View>
 
             <View style={styles.tripDetailCard}>
               <Text style={styles.inputLabel}>Delivery address</Text>
               <Text style={styles.addressText}>
-                {formData.deliveryAddress || '35 Hakeem Dickson Street, Lekki Phase 1...'}
+                {formData.deliveryAddress ||
+                  '35 Hakeem Dickson Street, Lekki Phase 1...'}
               </Text>
             </View>
 
@@ -112,7 +129,9 @@ const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
                 <Text style={styles.truckName}>
                   {formData.truckType || 'Standard Rigid Dump Truck'}
                 </Text>
-                <Text style={styles.truckSpec}>Capacity: 10-30 cubic yards</Text>
+                <Text style={styles.truckSpec}>
+                  Capacity: 10-30 cubic yards
+                </Text>
                 <Text style={styles.truckSpec}>Load weight: 15-25 tons</Text>
                 <Text style={styles.truckSpec}>Tyres: 6</Text>
               </View>
@@ -154,7 +173,9 @@ const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
                 <TextInput
                   style={styles.fareInput}
                   value={formData.fareOffer || '10000'}
-                  onChangeText={text => setFormData({ ...formData, fareOffer: text })}
+                  onChangeText={text =>
+                    setFormData({...formData, fareOffer: text})
+                  }
                   keyboardType="numeric"
                   placeholder="10000"
                   placeholderTextColor="#C0C0C0"
@@ -168,15 +189,21 @@ const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
             <View style={styles.fareNoteContainer}>
               <Text style={styles.fareNoteIcon}>ⓘ</Text>
               <Text style={styles.fareNote}>
-                Please note that the recommended minimum fare for this trip is NGN 10,000.
+                Please note that the recommended minimum fare for this trip is
+                NGN 10,000.
               </Text>
             </View>
 
             <TouchableOpacity
               style={styles.fullWidthButton}
-              onPress={handleSearchDriver}
-            >
-              <Text style={styles.fullWidthButtonText}>SEARCH FOR DRIVER</Text>
+              onPress={loading ? null : handleSearchDriver}>
+              {loading ? (
+                <ActivityIndicator />
+              ) : (
+                <Text style={styles.fullWidthButtonText}>
+                  SEARCH FOR DRIVER
+                </Text>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </View>

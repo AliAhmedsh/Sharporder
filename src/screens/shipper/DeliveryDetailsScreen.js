@@ -10,31 +10,135 @@ import {
   View,
 } from 'react-native';
 import {useAppContext} from '../../context/AppContext';
+import {Formik, useFormikContext} from 'formik';
+import * as Yup from 'yup';
+
+const validationSchema = Yup.object().shape({
+  pickupAddress: Yup.string().required('Pickup address is required'),
+  deliveryAddress: Yup.string().required('Delivery address is required'),
+  truckType: Yup.string().required('Please select a truck type'),
+  loadDescription: Yup.string().required('Load description is required'),
+  recipientName: Yup.string().required("Recipient's name is required"),
+  recipientNumber: Yup.string()
+    .matches(/^\+?\d{10,15}$/, 'Enter a valid phone number')
+    .required("Recipient's number is required"),
+});
+
+// ✅ Truck Selector Modal that consumes Formik context
+const TruckSelector = ({showTruckSelector, setShowTruckSelector}) => {
+  const {values, setFieldValue} = useFormikContext();
+
+  const handleSelect = truckType => {
+    setFieldValue('truckType', truckType);
+    setShowTruckSelector(false);
+  };
+
+  return (
+    <Modal visible={showTruckSelector} transparent animationType="slide">
+      <View style={styles.truckModalOverlay}>
+        <TouchableOpacity
+          style={styles.truckBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowTruckSelector(false)}
+        />
+        <View style={styles.truckModal}>
+          <View style={styles.dragHandle} />
+          <Text style={styles.modalTitle}>Select your truck</Text>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.truckScrollContent}>
+            {[
+              {
+                name: 'Standard Rigid Dump Truck',
+                specs: [
+                  'Capacity: 10-30 cubic yards',
+                  'Load weight: 15-25 tons',
+                  'Tyres: 6',
+                ],
+              },
+              {
+                name: 'Articulated Dump Truck',
+                specs: [
+                  'Capacity: 25-45 cubic yards',
+                  'Load weight: 35-45 tons',
+                  'Tyres: 10',
+                ],
+              },
+              {
+                name: 'Transfer Dump Truck',
+                specs: [
+                  'Capacity: 15-25 cubic yards',
+                  'Load weight: 20-30 tons combined',
+                  'Tyres: 8',
+                ],
+              },
+              {
+                name: 'Super Dump Truck',
+                specs: [
+                  'Capacity: 20-30 cubic yards',
+                  'Load weight: 26-33 tons',
+                  'Tyres: 12',
+                ],
+              },
+              {
+                name: 'Semi-trailer End Dump Truck',
+                specs: [
+                  'Capacity: 20-30 cubic yards',
+                  'Load weight: 20-25 tons',
+                  'Tyres: 8',
+                ],
+              },
+              {
+                name: 'Double/Triple Bottom Dump',
+                specs: [
+                  'Capacity: 30-40 cubic yards',
+                  'Load weight: 40-50 tons',
+                  'Tyres: 14',
+                ],
+              },
+            ].map(truck => (
+              <TouchableOpacity
+                key={truck.name}
+                style={[
+                  styles.truckOption,
+                  values.truckType === truck.name && styles.selectedTruckOption,
+                ]}
+                onPress={() => handleSelect(truck.name)}>
+                <View style={styles.truckIconContainer}>
+                  <Text style={styles.truckIcon}>🚛</Text>
+                </View>
+                <View style={styles.truckDetails}>
+                  <Text style={styles.truckName}>{truck.name}</Text>
+                  {truck.specs.map((s, i) => (
+                    <Text key={i} style={styles.truckSpec}>
+                      {s}
+                    </Text>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 const DeliveryDetailsScreen = ({
   visible,
   onClose = () => {},
   onContinue = () => {},
 }) => {
-  const {
-    formData,
-    setFormData,
-    showTruckSelector,
-    setShowTruckSelector,
-    truckTypes,
-  } = useAppContext();
-
+  const {showTruckSelector, setShowTruckSelector} = useAppContext();
   const navigation = useNavigation();
   const [isReceiving, setIsReceiving] = useState(false);
 
-  const handleContinue = () => {
+  const handleContinue = values => {
     onClose();
-    // If parent provided a custom continue handler (modal step flow), use it
     if (typeof onContinue === 'function') {
-      onContinue();
+      onContinue(values);
       return;
     }
-    // Fallback to navigating to TripDetails screen
     navigation.navigate('TripDetails');
   };
 
@@ -56,299 +160,178 @@ const DeliveryDetailsScreen = ({
           <View style={styles.modalContainer}>
             <View style={styles.dragHandle} />
 
-            <ScrollView
-              style={styles.formContainer}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled">
-              <Text style={styles.pageTitle}>Delivery details</Text>
+            <Formik
+              initialValues={{
+                pickupAddress: '',
+                deliveryAddress: '',
+                truckType: '',
+                loadDescription: '',
+                recipientName: '',
+                recipientNumber: '',
+              }}
+              validationSchema={validationSchema}
+              onSubmit={handleContinue}>
+              {({handleChange, handleSubmit, values, errors, touched}) => (
+                <>
+                  <ScrollView
+                    style={styles.formContainer}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled">
+                    <Text style={styles.pageTitle}>Delivery details</Text>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Pickup address</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter here"
-                  value={formData.pickupAddress}
-                  onChangeText={text =>
-                    setFormData({...formData, pickupAddress: text})
-                  }
-                  placeholderTextColor="#C0C0C0"
-                />
-              </View>
+                    {/* Pickup Address */}
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Pickup address</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter here"
+                        value={values.pickupAddress}
+                        onChangeText={handleChange('pickupAddress')}
+                        placeholderTextColor="#C0C0C0"
+                      />
+                      {touched.pickupAddress && errors.pickupAddress && (
+                        <Text style={{color: 'red'}}>
+                          {errors.pickupAddress}
+                        </Text>
+                      )}
+                    </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Delivery address</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter here"
-                  value={formData.deliveryAddress}
-                  onChangeText={text =>
-                    setFormData({...formData, deliveryAddress: text})
-                  }
-                  placeholderTextColor="#C0C0C0"
-                />
-              </View>
+                    {/* Delivery Address */}
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Delivery address</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter here"
+                        value={values.deliveryAddress}
+                        onChangeText={handleChange('deliveryAddress')}
+                        placeholderTextColor="#C0C0C0"
+                      />
+                      {touched.deliveryAddress && errors.deliveryAddress && (
+                        <Text style={{color: 'red'}}>
+                          {errors.deliveryAddress}
+                        </Text>
+                      )}
+                    </View>
 
-              <TouchableOpacity
-                style={styles.inputContainer}
-                onPress={() => setShowTruckSelector(true)}>
-                <Text style={styles.inputLabel}>Truck type</Text>
-                <View style={styles.selectInput}>
-                  <Text
-                    style={[
-                      styles.selectText,
-                      formData.truckType && styles.selectedText,
-                    ]}>
-                    {formData.truckType || 'Select here'}
-                  </Text>
-                  <Text style={styles.selectArrow}>⌄</Text>
-                </View>
-              </TouchableOpacity>
+                    {/* Truck Type */}
+                    <TouchableOpacity
+                      style={styles.inputContainer}
+                      onPress={() => setShowTruckSelector(true)}>
+                      <Text style={styles.inputLabel}>Truck type</Text>
+                      <View style={styles.selectInput}>
+                        <Text
+                          style={[
+                            styles.selectText,
+                            values.truckType && styles.selectedText,
+                          ]}>
+                          {values.truckType || 'Select here'}
+                        </Text>
+                        <Text style={styles.selectArrow}>⌄</Text>
+                      </View>
+                      {touched.truckType && errors.truckType && (
+                        <Text style={{color: 'red'}}>{errors.truckType}</Text>
+                      )}
+                    </TouchableOpacity>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Load description</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter here"
-                  value={formData.loadDescription}
-                  onChangeText={text =>
-                    setFormData({...formData, loadDescription: text})
-                  }
-                  placeholderTextColor="#C0C0C0"
-                />
-              </View>
+                    {/* Load Description */}
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Load description</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter here"
+                        value={values.loadDescription}
+                        onChangeText={handleChange('loadDescription')}
+                        placeholderTextColor="#C0C0C0"
+                      />
+                      {touched.loadDescription && errors.loadDescription && (
+                        <Text style={{color: 'red'}}>
+                          {errors.loadDescription}
+                        </Text>
+                      )}
+                    </View>
 
-              <TouchableOpacity style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Load image (optional)</Text>
-                <View style={styles.uploadContainer}>
-                  <Text style={styles.uploadText}>Upload here</Text>
-                  <Text style={styles.uploadIcon}>↗</Text>
-                </View>
-              </TouchableOpacity>
+                    {/* Load Image */}
+                    <TouchableOpacity style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>
+                        Load image (optional)
+                      </Text>
+                      <View style={styles.uploadContainer}>
+                        <Text style={styles.uploadText}>Upload here</Text>
+                        <Text style={styles.uploadIcon}>↗</Text>
+                      </View>
+                    </TouchableOpacity>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Recipient's name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter here"
-                  value={formData.recipientName}
-                  onChangeText={text =>
-                    setFormData({...formData, recipientName: text})
-                  }
-                  placeholderTextColor="#C0C0C0"
-                />
-              </View>
+                    {/* Recipient Name */}
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Recipient's name</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter here"
+                        value={values.recipientName}
+                        onChangeText={handleChange('recipientName')}
+                        placeholderTextColor="#C0C0C0"
+                      />
+                      {touched.recipientName && errors.recipientName && (
+                        <Text style={{color: 'red'}}>
+                          {errors.recipientName}
+                        </Text>
+                      )}
+                    </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Recipient's number</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="+234 08012345678"
-                  value={formData.recipientNumber}
-                  onChangeText={text =>
-                    setFormData({...formData, recipientNumber: text})
-                  }
-                  keyboardType="phone-pad"
-                  placeholderTextColor="#C0C0C0"
-                />
-              </View>
+                    {/* Recipient Number */}
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Recipient's number</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="+234 08012345678"
+                        value={values.recipientNumber}
+                        onChangeText={handleChange('recipientNumber')}
+                        keyboardType="phone-pad"
+                        placeholderTextColor="#C0C0C0"
+                      />
+                      {touched.recipientNumber && errors.recipientNumber && (
+                        <Text style={{color: 'red'}}>
+                          {errors.recipientNumber}
+                        </Text>
+                      )}
+                    </View>
 
-              <View style={styles.toggleContainer}>
-                <Text style={styles.toggleText}>I'm receiving it</Text>
-                <TouchableOpacity
-                  style={[styles.toggle, isReceiving && styles.toggleActive]}
-                  onPress={() => setIsReceiving(!isReceiving)}>
-                  <View
-                    style={[
-                      styles.toggleThumb,
-                      isReceiving && styles.toggleThumbActive,
-                    ]}
+                    {/* Toggle */}
+                    <View style={styles.toggleContainer}>
+                      <Text style={styles.toggleText}>I'm receiving it</Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.toggle,
+                          isReceiving && styles.toggleActive,
+                        ]}
+                        onPress={() => setIsReceiving(!isReceiving)}>
+                        <View
+                          style={[
+                            styles.toggleThumb,
+                            isReceiving && styles.toggleThumbActive,
+                          ]}
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Submit */}
+                    <TouchableOpacity
+                      style={styles.fullWidthButton}
+                      onPress={handleSubmit}>
+                      <Text style={styles.fullWidthButtonText}>CONTINUE</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+
+                  {/* Truck Selector Modal lives inside Formik ✅ */}
+                  <TruckSelector
+                    showTruckSelector={showTruckSelector}
+                    setShowTruckSelector={setShowTruckSelector}
+                    styles={styles}
                   />
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                style={styles.fullWidthButton}
-                onPress={handleContinue}>
-                <Text style={styles.fullWidthButtonText}>CONTINUE</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Truck Selector Modal - Separate from main modal */}
-      <Modal visible={showTruckSelector} transparent animationType="slide">
-        <View style={styles.truckModalOverlay}>
-          <TouchableOpacity
-            style={styles.truckBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowTruckSelector(false)}
-          />
-          <View style={styles.truckModal}>
-            <View style={styles.dragHandle} />
-            <Text style={styles.modalTitle}>Select your truck</Text>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.truckScrollContent}>
-              <TouchableOpacity
-                style={[
-                  styles.truckOption,
-                  formData.truckType === 'Standard Rigid Dump Truck' &&
-                    styles.selectedTruckOption,
-                ]}
-                onPress={() => {
-                  setFormData({
-                    ...formData,
-                    truckType: 'Standard Rigid Dump Truck',
-                  });
-                  setShowTruckSelector(false);
-                }}>
-                <View style={styles.truckIconContainer}>
-                  <Text style={styles.truckIcon}>🚛</Text>
-                </View>
-                <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>
-                    Standard Rigid Dump Truck
-                  </Text>
-                  <Text style={styles.truckSpec}>
-                    Capacity: 10-30 cubic yards
-                  </Text>
-                  <Text style={styles.truckSpec}>Load weight: 15-25 tons</Text>
-                  <Text style={styles.truckSpec}>Tyres: 6</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.truckOption,
-                  formData.truckType === 'Articulated Dump Truck' &&
-                    styles.selectedTruckOption,
-                ]}
-                onPress={() => {
-                  setFormData({
-                    ...formData,
-                    truckType: 'Articulated Dump Truck',
-                  });
-                  setShowTruckSelector(false);
-                }}>
-                <View style={styles.truckIconContainer}>
-                  <Text style={styles.truckIcon}>🚛</Text>
-                </View>
-                <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>Articulated Dump Truck</Text>
-                  <Text style={styles.truckSpec}>
-                    Capacity: 25-45 cubic yards
-                  </Text>
-                  <Text style={styles.truckSpec}>Load weight: 35-45 tons</Text>
-                  <Text style={styles.truckSpec}>Tyres: 10</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.truckOption,
-                  formData.truckType === 'Transfer Dump Truck' &&
-                    styles.selectedTruckOption,
-                ]}
-                onPress={() => {
-                  setFormData({...formData, truckType: 'Transfer Dump Truck'});
-                  setShowTruckSelector(false);
-                }}>
-                <View style={styles.truckIconContainer}>
-                  <Text style={styles.truckIcon}>🚛</Text>
-                </View>
-                <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>Transfer Dump Truck</Text>
-                  <Text style={styles.truckSpec}>
-                    Capacity: 15-25 cubic yards
-                  </Text>
-                  <Text style={styles.truckSpec}>
-                    Load weight: 20-30 tons combined
-                  </Text>
-                  <Text style={styles.truckSpec}>Tyres: 8</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.truckOption,
-                  formData.truckType === 'Super Dump Truck' &&
-                    styles.selectedTruckOption,
-                ]}
-                onPress={() => {
-                  setFormData({...formData, truckType: 'Super Dump Truck'});
-                  setShowTruckSelector(false);
-                }}>
-                <View style={styles.truckIconContainer}>
-                  <Text style={styles.truckIcon}>🚛</Text>
-                </View>
-                <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>Super Dump Truck</Text>
-                  <Text style={styles.truckSpec}>
-                    Capacity: 20-30 cubic yards
-                  </Text>
-                  <Text style={styles.truckSpec}>Load weight: 26-33 tons</Text>
-                  <Text style={styles.truckSpec}>Tyres: 12</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.truckOption,
-                  formData.truckType === 'Semi-trailer End Dump Truck' &&
-                    styles.selectedTruckOption,
-                ]}
-                onPress={() => {
-                  setFormData({
-                    ...formData,
-                    truckType: 'Semi-trailer End Dump Truck',
-                  });
-                  setShowTruckSelector(false);
-                }}>
-                <View style={styles.truckIconContainer}>
-                  <Text style={styles.truckIcon}>🚛</Text>
-                </View>
-                <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>
-                    Semi-trailer End Dump Truck
-                  </Text>
-                  <Text style={styles.truckSpec}>
-                    Capacity: 20-30 cubic yards
-                  </Text>
-                  <Text style={styles.truckSpec}>Load weight: 20-25 tons</Text>
-                  <Text style={styles.truckSpec}>Tyres: 8</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.truckOption,
-                  formData.truckType === 'Double/Triple Bottom Dump' &&
-                    styles.selectedTruckOption,
-                ]}
-                onPress={() => {
-                  setFormData({
-                    ...formData,
-                    truckType: 'Double/Triple Bottom Dump',
-                  });
-                  setShowTruckSelector(false);
-                }}>
-                <View style={styles.truckIconContainer}>
-                  <Text style={styles.truckIcon}>🚛</Text>
-                </View>
-                <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>
-                    Double/Triple Bottom Dump
-                  </Text>
-                  <Text style={styles.truckSpec}>
-                    Capacity: 30-40 cubic yards
-                  </Text>
-                  <Text style={styles.truckSpec}>Load weight: 40-50 tons</Text>
-                  <Text style={styles.truckSpec}>Tyres: 14</Text>
-                </View>
-              </TouchableOpacity>
-            </ScrollView>
+                </>
+              )}
+            </Formik>
           </View>
         </View>
       </Modal>
