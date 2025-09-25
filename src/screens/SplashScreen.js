@@ -3,14 +3,12 @@ import { View, StyleSheet, StatusBar, Image, ActivityIndicator } from 'react-nat
 import { useNavigation } from '@react-navigation/native';
 import PropTypes from 'prop-types';
 import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import { getFirestore, doc, getDoc } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
 
-// Get the default auth instance
-const authInstance = auth();
 // Get the default firestore instance
-const firestoreInstance = firestore();
+const db = getFirestore();
 
 const SplashScreen = ({ navigation }) => {
   const authContext = useContext(AuthContext);
@@ -30,6 +28,8 @@ const SplashScreen = ({ navigation }) => {
   
   // Use a ref to track if we've already initialized navigation
   const navigationInitialized = useRef(false);
+  const retryCount = useRef(0);
+  const maxRetries = 3;
 
   const navigateToScreen = (routeName, params = {}) => {
     if (!navigation || !navigation.navigate) {
@@ -51,6 +51,15 @@ const SplashScreen = ({ navigation }) => {
     const checkAuthAndNavigate = async () => {
       if (navigationInitialized.current) return;
       
+      // Check retry count to prevent infinite loops
+      if (retryCount.current >= maxRetries) {
+        console.error('Max retries reached, stopping navigation attempts');
+        setIsLoading(false);
+        return;
+      }
+      
+      retryCount.current += 1;
+      
       try {
         // Small delay to ensure navigation is ready
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -59,7 +68,7 @@ const SplashScreen = ({ navigation }) => {
         const hasSeenOnboarding = await AsyncStorage.getItem('@hasSeenOnboarding').catch(() => 'false');
         
         // Check if user is authenticated using the auth instance
-        const currentUser = authInstance.currentUser;
+        const currentUser = auth().currentUser;
         
         if (!currentUser) {
           // No user is signed in
@@ -75,11 +84,12 @@ const SplashScreen = ({ navigation }) => {
         }
 
         // User is authenticated, check their type using the firestore instance
-        const userDoc = await firestoreInstance.collection('users').doc(currentUser.uid).get();
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
         
         if (!userDoc.exists) {
           // User document doesn't exist, sign out and show login
-          await authInstance.signOut();
+          await auth().signOut();
           navigateToScreen('Auth', { screen: 'Login' });
           navigationInitialized.current = true;
           return;
@@ -89,7 +99,7 @@ const SplashScreen = ({ navigation }) => {
         
         if (!userData || !userData.userType) {
           // User data is incomplete, sign out and show login
-          await authInstance.signOut();
+          await auth().signOut();
           navigateToScreen('Auth', { screen: 'Login' });
           navigationInitialized.current = true;
           return;
@@ -118,13 +128,20 @@ const SplashScreen = ({ navigation }) => {
               index: 0,
               routes: [{ name: routeName, params }],
             });
+            navigationInitialized.current = true;
           } else {
-            // If navigation is not available, use a simple timeout to retry
-            console.warn('Navigation not available, retrying...');
-            setTimeout(checkAuthAndNavigate, 1000);
+            // If navigation is not available, retry with exponential backoff
+            console.warn(`Navigation not available, retrying... (attempt ${retryCount.current}/${maxRetries})`);
+            if (retryCount.current < maxRetries) {
+              setTimeout(checkAuthAndNavigate, 1000 * retryCount.current);
+            } else {
+              console.error('Max retries reached, navigation still not available');
+              setIsLoading(false);
+            }
           }
         } catch (nestedError) {
           console.error('Error in error handler:', nestedError);
+          setIsLoading(false);
         }
       } finally {
         setIsLoading(false);

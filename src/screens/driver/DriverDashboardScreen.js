@@ -29,6 +29,8 @@ import previous from '../../assets/icons/previous.png';
 import next from '../../assets/icons/next.png';
 
 import { useAuth } from '../../context/AuthContext';
+import { realTimeService, firebaseLoadsService } from '../../services/firebase';
+import auth from '@react-native-firebase/auth';
 
 const DriverStats = () => {
   return (
@@ -39,7 +41,7 @@ const DriverStats = () => {
           <Text style={styles.statsLink}>Earnings</Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.statsValue}>₦500,000</Text>
+      <Text style={styles.statsValue}>₦0</Text>
       <View style={styles.statsDivider} />
       
       <View style={styles.statsHeader}>
@@ -113,6 +115,16 @@ const LoadCard = ({ load }) => {
 };
 
 const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPress }) => {
+  const pickup = load?.pickupAddress || 'Pickup address';
+  const delivery = load?.deliveryAddress || 'Delivery address';
+  const fareOffer = typeof load?.fareOffer === 'number' 
+    ? `NGN ${ (load.fareOffer.toLocaleString && load.fareOffer.toLocaleString()) || load.fareOffer }`
+    : (load?.fareOffer ? `NGN ${load.fareOffer}` : 'NGN -');
+  const truckType = load?.truckType || 'Truck';
+  const shipperName = load?.shipperName || 'Shipper';
+  const timeText = load?.createdAt 
+    ? (load.createdAt.toLocaleString ? load.createdAt.toLocaleString() : new Date(load.createdAt).toLocaleString())
+    : 'Just now';
   return (
     <View style={styles.onlineLoadCard}>
       <View style={styles.onlineLoadContent}>
@@ -123,29 +135,29 @@ const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPr
           />
           <View style={styles.onlineLoadInfo}>
             <View style={styles.onlineNameRow}>
-              <Text style={styles.onlineCustomerName}>Kunle Alamu</Text>
+              <Text style={styles.onlineCustomerName}>{shipperName}</Text>
               <View style={styles.onlineRating}>
                 <Text style={styles.onlineStar}>⭐</Text>
-                <Text style={styles.onlineRatingText}>4.5</Text>
+                <Text style={styles.onlineRatingText}>{(load?.shipperRating || 4.5).toString()}</Text>
               </View>
             </View>
-            <Text style={styles.onlineTime}>10 mins away</Text>
-            <Text style={styles.onlineCapacity}>Load capacity: 10-30 cubic yards</Text>
+            <Text style={styles.onlineTime}>{timeText}</Text>
+            <Text style={styles.onlineCapacity}>{truckType}</Text>
           </View>
         </View>
         
         <View style={styles.onlineLocations}>
           <View style={styles.onlineLocationItem}>
             <View style={styles.greenDot} />
-            <Text style={styles.onlineLocationText}>15 Bode Thomas Street, Surulere, Lagos</Text>
+            <Text style={styles.onlineLocationText}>{pickup}</Text>
           </View>
           <View style={styles.onlineLocationItem}>
             <View style={styles.purpleDot} />
-            <Text style={styles.onlineLocationText}>35 Hakeem Dickson Street, Lekki Phase 1...</Text>
+            <Text style={styles.onlineLocationText}>{delivery}</Text>
           </View>
         </View>
         
-        <Text style={styles.onlinePrice}>NGN 15,000</Text>
+        <Text style={styles.onlinePrice}>{fareOffer}</Text>
       </View>
       
       {showActions ? (
@@ -170,7 +182,7 @@ const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPr
 const { height, width: screenWidth } = Dimensions.get('window');
 
 const DriverDashboardScreen = ({ navigation }) => {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -184,6 +196,7 @@ const DriverDashboardScreen = ({ navigation }) => {
       console.error('Logout error:', error);
     }
   };
+
   const bottomSheetHeight = Math.round(height * 0.95);
   const PEEK_HEIGHT = 350;
   const bottomSheetTranslateY = useRef(new Animated.Value(bottomSheetHeight - PEEK_HEIGHT)).current;
@@ -197,14 +210,53 @@ const DriverDashboardScreen = ({ navigation }) => {
   const drawerTranslateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
-  // Sample loads data
-  const [availableLoads, setAvailableLoads] = useState([
-    { id: 1, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
-    { id: 2, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
-    { id: 3, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
-    { id: 4, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
-    { id: 5, customer: 'Kunle Alamu', rating: 4.5, time: '10 mins away' },
-  ]);
+  // Real-time available loads for drivers
+  const [availableLoads, setAvailableLoads] = useState([]);
+  // Delay clearing to avoid flicker on transient empty snapshots
+  const emptyClearTimeoutRef = useRef(null);
+
+  // Start/stop realtime subscription when going online/offline
+  useEffect(() => {
+    let unsubscribe = null;
+    if (isOnline) {
+      // Note: truckType filter temporarily disabled to diagnose disappearing cards
+      unsubscribe = realTimeService.subscribeToAvailableLoads((loads) => {
+        const count = Array.isArray(loads) ? loads.length : 0;
+        console.log('Realtime available loads count:', count);
+        if (count > 0) {
+          if (emptyClearTimeoutRef.current) {
+            clearTimeout(emptyClearTimeoutRef.current);
+            emptyClearTimeoutRef.current = null;
+          }
+          setAvailableLoads(loads);
+        } else {
+          // Defer clearing briefly to avoid flicker
+          if (emptyClearTimeoutRef.current) {
+            clearTimeout(emptyClearTimeoutRef.current);
+          }
+          emptyClearTimeoutRef.current = setTimeout(() => {
+            setAvailableLoads([]);
+            emptyClearTimeoutRef.current = null;
+          }, 800);
+        }
+      }, {});
+    } else {
+      // Clear when offline
+      if (emptyClearTimeoutRef.current) {
+        clearTimeout(emptyClearTimeoutRef.current);
+        emptyClearTimeoutRef.current = null;
+      }
+      setAvailableLoads([]);
+    }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      if (emptyClearTimeoutRef.current) {
+        clearTimeout(emptyClearTimeoutRef.current);
+        emptyClearTimeoutRef.current = null;
+      }
+    };
+  }, [isOnline, user?.truckType]);
 
   useEffect(() => {
     bottomSheetTranslateY.setValue(bottomSheetHeight - PEEK_HEIGHT);
@@ -295,12 +347,48 @@ const DriverDashboardScreen = ({ navigation }) => {
     setShowAcceptModal(false);
   };
 
-  const handleAcceptLoad = (loadId) => {
-    console.log('Accepted load:', loadId);
-    setActiveLoadIndex(null); // Hide actions after accept
-    const load = availableLoads.find(l => l.id === loadId) || null;
-    setSelectedLoad(load);
-    setShowAcceptModal(true); // Show confirmation modal and hide cards
+  const handleAcceptLoad = async (load) => {
+    try {
+      if (!load?.id) return;
+      const driverId = user?.uid || auth().currentUser?.uid;
+      if (!driverId) {
+        Alert.alert('Not signed in', 'Please sign in to accept a load.');
+        return;
+      }
+
+      // Debug: Log the load data to see what's being passed
+      console.log('Load data:', load);
+
+      // Get the fare offer - handle different possible formats
+      const fareOffer = load.fareOffer || load.price || load.amount || 10000;
+      console.log('Fare offer:', fareOffer);
+
+      // Submit a bid using the new bidding system
+      const res = await firebaseLoadsService.submitBid(load.id, driverId, fareOffer);
+      if (!res?.success) {
+        throw new Error(res?.error || 'Failed to submit bid');
+      }
+
+      setActiveLoadIndex(null);
+      setSelectedLoad(load);
+      Alert.alert('Bid Submitted', 'Your bid has been submitted. Waiting for shipper response.');
+
+      // Subscribe to this load for status updates; navigate when accepted
+      const unsubscribe = firebaseLoadsService.subscribeToLoad(load.id, (updated) => {
+        console.log('Load updated:', updated);
+        if (updated && updated.status === 'accepted') {
+          unsubscribe && unsubscribe();
+          navigation.navigate('DriverOnTheWay', {
+            price: (typeof updated.fareOffer === 'number' ? `NGN ${updated.fareOffer}` : (updated.fareOffer || 'NGN -')),
+            load: updated,
+            shipmentId: updated.shipmentId || null,
+          });
+        }
+      });
+    } catch (e) {
+      console.error('Submit bid error:', e);
+      Alert.alert('Error', e.message || 'Could not submit bid. Please try again.');
+    }
   };
 
   const handleDenyLoad = (loadId) => {
@@ -332,9 +420,9 @@ const DriverDashboardScreen = ({ navigation }) => {
 
       {/* Header with Go Online/Offline Button */}
       <View style={styles.headerContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.goOnlineButton, 
+            styles.goOnlineButton,
             { backgroundColor: isOnline ? '#FF4444' : '#00C896' }
           ]}
           onPress={toggleOnlineStatus}
@@ -367,7 +455,7 @@ const DriverDashboardScreen = ({ navigation }) => {
                 key={load.id}
                 load={load}
                 showActions={index === activeLoadIndex}
-                onAccept={() => handleAcceptLoad(load.id)}
+                onAccept={() => handleAcceptLoad(load)}
                 onDeny={() => handleDenyLoad(load.id)}
                 onArrowPress={() => handleArrowPress(load.id, index)}
               />

@@ -22,6 +22,7 @@ import {
 
 import MapView from 'react-native-maps';
 import DeliveryDetailsScreen from './DeliveryDetailsScreen';
+import TripDetailsScreen from './TripDetailsScreen';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import hamburger from '../../assets/icons/hamburger.png';
 import headset from '../../assets/icons/headset.png';
@@ -139,7 +140,8 @@ const DashboardScreen = ({ navigation }) => {
   const handleSuggestionPress = (item) => {
     setQuery(item);
     searchLocation();
-    navigation?.navigate && navigation.navigate('DeliveryDetails');
+    // Open delivery details step instead of navigating to a route
+    setStep(1);
   };
 
   const closeBookingSheet = () => {
@@ -302,8 +304,6 @@ const DashboardScreen = ({ navigation }) => {
                 onFocusSearch={openBookingSheet}
                 onSuggestionPress={handleSuggestionPress}
               />
-            ) : step === 1 ? (
-              <DeliveryDetailsScreen />
             ) : null}
           </ScrollView>
         </Animated.View>
@@ -422,6 +422,21 @@ const DashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
       )}
 
+      {/* Step Modals */}
+      {step === 1 && (
+        <DeliveryDetailsScreen
+          visible={true}
+          onClose={() => setStep(0)}
+          onContinue={() => setStep(2)}
+        />
+      )}
+      {step === 2 && (
+        <TripDetailsScreen
+          visible={true}
+          onClose={() => setStep(1)}
+          navigation={navigation}
+        />
+      )}
     </SafeAreaView>
   );
 };

@@ -521,7 +521,9 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     getUserData,
     getAuthErrorMessage,
-    setNavigation // Add setNavigation to context
+    setNavigation, // Add setNavigation to context
+    setUser, // Add setUser to context
+    setUserType // Add setUserType to context
   };
 
   return (

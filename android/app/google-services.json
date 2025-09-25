@@ -1,37 +1,26 @@
 {
   "project_info": {
-    "project_number": "820273361039",
-    "firebase_url": "https://gram-4a58a-default-rtdb.firebaseio.com",
-    "project_id": "gram-4a58a",
-    "storage_bucket": "gram-4a58a.appspot.com"
+    "project_number": "53281334067",
+    "project_id": "sharp-order-21054",
+    "storage_bucket": "sharp-order-21054.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:820273361039:android:31822932009e943577c0fa",
+        "mobilesdk_app_id": "1:53281334067:android:3a7ff10d7ce5965deed446",
         "android_client_info": {
-          "package_name": "com.weblahChatApp"
+          "package_name": "com.sharporder"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "820273361039-tu9ccoatkg8t47dlrj8c2vm7auu5u69t.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDnYorBdk9HkEtvtcyZacLDMy9EhJoD8W4"
+          "current_key": "AIzaSyCr3k7sLVQkRDnNedCznPNt5FPjk2xfkMo"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "820273361039-tu9ccoatkg8t47dlrj8c2vm7auu5u69t.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

@@ -1,4 +1,4 @@
-package com.weblahChatApp
+package com.sharporder
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { firebaseDriversService } from '../../services/firebase';
+import { realTimeService, firebaseLoadsService, firebaseShipmentsService } from '../../services/firebase';
 import back from '../../assets/icons/back.png';
 import emptyStateImage from '../../assets/empty-load-board.png';
 import search from '../../assets/icons/search.png';
@@ -21,39 +21,219 @@ const LoadBoardScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bids, setBids] = useState([]);
   const [loadingBids, setLoadingBids] = useState(false);
+  const [myLoads, setMyLoads] = useState([]);
+  const emptyClearTimeoutRef = useRef(null);
 
-  // Load real-time loads data
+  // Subscribe to load changes in real-time to detect new applications
   useEffect(() => {
-    if (user) {
-      // Loads will be updated via real-time subscription from AppContext
-      console.log('Loading loads for user:', user.uid);
-    }
-  }, [user]);
+    if (!user?.uid) return;
+
+    const unsubscribe = realTimeService.subscribeToUserLoads(user.uid, (loads) => {
+      const list = Array.isArray(loads) ? loads : [];
+      if (list.length > 0) {
+        if (emptyClearTimeoutRef.current) {
+          clearTimeout(emptyClearTimeoutRef.current);
+          emptyClearTimeoutRef.current = null;
+        }
+        setMyLoads(list);
+      } else {
+        if (emptyClearTimeoutRef.current) {
+          clearTimeout(emptyClearTimeoutRef.current);
+        }
+        emptyClearTimeoutRef.current = setTimeout(() => {
+          setMyLoads([]);
+          emptyClearTimeoutRef.current = null;
+        }, 800);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      if (emptyClearTimeoutRef.current) {
+        clearTimeout(emptyClearTimeoutRef.current);
+        emptyClearTimeoutRef.current = null;
+      }
+    };
+  }, [user?.uid]);
+
+  const closeDrawer = () => {
+    setShowLoadDrawer(false);
+    setSelectedLoad(null);
+    setBids([]);
+  };
 
   const handleViewBids = async (load) => {
+    // Prevent multiple calls
+    if (showLoadDrawer || loadingBids) {
+      console.log('Modal already open or loading, ignoring...');
+      return;
+    }
+
+    console.log('Opening bids modal for load:', load.id);
+
     setSelectedLoad(load);
     setShowLoadDrawer(true);
     setLoadingBids(true);
 
     try {
-      // Get bids from Firebase (simulated for now - would come from drivers collection)
-      const bidsData = [
-        { id: 1, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-        { id: 2, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-        { id: 3, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-        { id: 4, company: 'Oluwatomisin Alamu', amount: 'NGN 15000', rating: '4.5', deliveryTime: '10 mins away' },
-      ];
-      setBids(bidsData);
+      // Get all bids for this load
+      console.log('Fetching bids for load:', load.id);
+      const bidsResult = await firebaseLoadsService.getBidsForLoad(load.id);
+
+      console.log('Bids fetch result:', bidsResult);
+
+      if (bidsResult.success && bidsResult.data && bidsResult.data.length > 0) {
+        const bidsData = await Promise.all(
+          bidsResult.data.map(async (bid) => {
+            try {
+              // Get driver information for each bid
+              const driverResult = await firebaseLoadsService.getDriverById(bid.driverId);
+              const driver = driverResult.success ? driverResult.data : null;
+
+              return {
+                id: bid.id,
+                loadId: bid.loadId,
+                driverId: bid.driverId,
+                company: driver ? (driver.name || driver.companyName || driver.displayName || 'Driver') : 'Driver',
+                amount: `₦${bid.offerAmount.toLocaleString()}`,
+                rating: driver ? (driver.rating || '4.5') : '4.5',
+                deliveryTime: 'Applied for load',
+                status: bid.status,
+                message: bid.message || '',
+                createdAt: bid.createdAt,
+                driverData: driver
+              };
+            } catch (error) {
+              console.error('Error fetching driver for bid:', bid.id, error);
+              return {
+                id: bid.id,
+                loadId: bid.loadId,
+                driverId: bid.driverId,
+                company: 'Error loading driver',
+                amount: `₦${bid.offerAmount.toLocaleString()}`,
+                rating: '—',
+                deliveryTime: 'Error loading data',
+                status: bid.status,
+                message: bid.message || '',
+                createdAt: bid.createdAt,
+                isError: true
+              };
+            }
+          })
+        );
+
+        setBids(bidsData);
+        console.log('Bids data set:', bidsData);
+      } else {
+        console.log('No bids found, setting empty state');
+        setBids([]);
+      }
     } catch (error) {
       console.error('Error loading bids:', error);
+      setBids([{
+        id: 'error',
+        company: 'Error loading bids',
+        amount: '—',
+        rating: '—',
+        deliveryTime: 'Please try again',
+        isError: true
+      }]);
     } finally {
       setLoadingBids(false);
     }
   };
 
-  const closeDrawer = () => {
-    setShowLoadDrawer(false);
-    setSelectedLoad(null);
+  const handleAcceptBid = async (bid) => {
+    try {
+      if (!selectedLoad) return;
+
+      console.log('Accepting bid:', bid.id, 'for load:', selectedLoad.id);
+
+      // Accept the bid using the new system
+      const acceptResult = await firebaseLoadsService.acceptBid(bid.id, selectedLoad.id, bid.driverId);
+      if (!acceptResult.success) {
+        throw new Error(acceptResult.error || 'Failed to accept bid');
+      }
+
+      // Create a shipment to start the flow
+      const shipmentData = {
+        loadId: selectedLoad.id,
+        shipperId: user.uid,
+        driverId: bid.driverId,
+        pickupAddress: selectedLoad.pickupAddress || selectedLoad.pickupLocation || 'Not specified',
+        deliveryAddress: selectedLoad.deliveryAddress || selectedLoad.deliveryLocation || 'Not specified',
+        truckType: selectedLoad.truckType || 'Standard',
+        weight: selectedLoad.weight || 'Not specified',
+        dimensions: selectedLoad.dimensions || 'Not specified',
+        fareOffer: bid.offerAmount, // Use the bid amount
+        status: 'pending',
+        driverAccepted: true,
+        shipperAccepted: true,
+        acceptedAt: new Date(),
+        acceptedBidId: bid.id,
+      };
+
+      const shipmentResult = await firebaseShipmentsService.createShipment(shipmentData);
+      if (!shipmentResult.success) {
+        throw new Error(shipmentResult.error || 'Failed to create shipment');
+      }
+
+      Alert.alert(
+        'Success',
+        `Bid accepted! Driver will be notified and shipment created.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              closeDrawer();
+              // Navigate to DriverFound screen with the load and shipment info
+              navigation.navigate('DriverFound', {
+                loadId: selectedLoad.id,
+                load: selectedLoad,
+                shipmentId: shipmentResult.data.id,
+                acceptedBidId: bid.id
+              });
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error accepting bid:', error);
+      Alert.alert('Error', 'Failed to accept bid. Please try again.');
+    }
+  };
+
+  const handleDeclineBid = async (bid) => {
+    try {
+      if (!selectedLoad) return;
+
+      console.log('Declining bid:', bid.id, 'for load:', selectedLoad.id);
+
+      // Reject the bid using the new system
+      const rejectResult = await firebaseLoadsService.rejectBid(bid.id, selectedLoad.id);
+      if (!rejectResult.success) {
+        throw new Error(rejectResult.error || 'Failed to decline bid');
+      }
+
+      Alert.alert(
+        'Success',
+        'Bid declined successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Refresh the bids list
+              if (selectedLoad) {
+                handleViewBids(selectedLoad);
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error declining bid:', error);
+      Alert.alert('Error', 'Failed to decline bid. Please try again.');
+    }
   };
 
   const handlePostLoad = async () => {
@@ -73,56 +253,94 @@ const LoadBoardScreen = ({ navigation }) => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'In Transit': return '#FFA500';
-      case 'Cancelled': return '#FF0000';
-      case 'Delivered': return '#4CAF50';
-      default: return '#FFA500';
+    switch ((status || '').toLowerCase()) {
+      case 'available': return '#1E90FF';
+      case 'applied': return '#FF8C00';
+      case 'in_transit': return '#FFA500';
+      case 'completed': return '#4CAF50';
+      case 'cancelled': return '#FF0000';
+      default: return '#A0AEC0';
     }
   };
 
-  const LoadCard = ({ load }) => (
-    <View style={styles.loadCard}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(load.status) }]}>
-          <Text style={styles.statusText}>{load.status}</Text>
+  const getStatusLabel = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'in_transit': return 'In Transit';
+      case 'completed': return 'Delivered';
+      default: return (status || 'Unknown');
+    }
+  };
+
+  const onLoadPress = (load) => {
+    const status = (load?.status || '').toLowerCase();
+    if (status === 'applied') {
+      navigation.navigate('DriverFound', { loadId: load.id, load });
+    } else if (status === 'available') {
+      // Navigate to DriverSearch and start searching for bids
+      navigation.navigate('DriverSearch', {
+        loadId: load.id,
+        load: load,
+        startSearching: true // Flag to indicate search should start immediately
+      });
+    } else if (status === 'in_transit') {
+      // Optionally navigate to a tracking/ongoing screen in future
+    }
+  };
+
+  const LoadCard = ({ load }) => {
+    const pickup = load?.pickupAddress || load?.pickupLocation || '-';
+    const delivery = load?.deliveryAddress || load?.deliveryLocation || '-';
+    const fare = typeof load?.fareOffer === 'number' ? `₦${load.fareOffer.toLocaleString?.() || load.fareOffer}` : (load?.fareOffer || '—');
+    const statusLabel = getStatusLabel(load?.status);
+
+    // Check if load has bids by looking at status and if there are any bids
+    const hasBids = load?.status === 'applied' || (load?.acceptedBidId && load?.acceptedBidId !== 'no-driver' && load?.acceptedBidId !== 'error');
+
+    return (
+      <TouchableOpacity onPress={() => onLoadPress(load)} activeOpacity={0.9}>
+        <View style={styles.loadCard}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(load.status) }]}>
+              <Text style={styles.statusText}>{statusLabel}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.loadTitle}>{pickup} → {delivery}</Text>
+
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailIcon}>🚚</Text>
+              <Text style={styles.detailText}>{load?.truckType || 'Truck'}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailIcon}>💰</Text>
+              <Text style={styles.detailText}>{fare}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailIcon}>👨‍✈️</Text>
+              <Text style={styles.detailText}>
+                {hasBids ? `${load?.bidCount || 'Multiple'} bid${(load?.bidCount || 'Multiple') > 1 ? 's' : ''}` : 'No bids yet'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.cardFooter}>
+            <View style={styles.priceInfo}>
+              <Text style={styles.bidsText}>Created: {load?.createdAt ? (load.createdAt.toLocaleString?.() || new Date(load.createdAt).toLocaleString()) : '—'}</Text>
+            </View>
+            {hasBids && (
+              <TouchableOpacity
+                style={styles.viewBidsButton}
+                onPress={() => handleViewBids(load)}
+              >
+                <Text style={styles.viewBidsText}>View Bids</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
-
-      <Text style={styles.loadTitle}>Load #{load.loadNumber} - {load.pickupLocation} → {load.deliveryLocation}</Text>
-
-      <View style={styles.detailsRow}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailIcon}>📍</Text>
-          <Text style={styles.detailText}>{load.deliveryLocation}</Text>
-        </View>
-
-        <View style={styles.detailItem}>
-          <Text style={styles.detailIcon}>🕐</Text>
-          <Text style={styles.detailText}>{load.pickupDate}</Text>
-        </View>
-
-        <View style={styles.detailItem}>
-          <Text style={styles.detailIcon}>🚚</Text>
-          <Text style={styles.detailText}>{load.truckType}</Text>
-        </View>
-      </View>
-
-      <View style={styles.cardFooter}>
-        <View style={styles.priceInfo}>
-          <Text style={styles.bidsText}>No. of bids: {load.numberOfBids || 0}</Text>
-          <Text style={styles.priceText}>₦{load.price?.toLocaleString() || '120,000 - 150,000'}</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.viewBidsButton}
-          onPress={() => handleViewBids(load)}
-        >
-          <Text style={styles.viewBidsText}>View Bids</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   // Empty State Component
   const EmptyState = () => (
@@ -131,79 +349,217 @@ const LoadBoardScreen = ({ navigation }) => {
     </View>
   );
 
-  const BidsDrawer = () => (
-    <Modal
-      visible={showLoadDrawer}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={closeDrawer}
-    >
-      <TouchableOpacity
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={closeDrawer}
+  const BidsDrawer = () => {
+    // Don't render if no load is selected or modal shouldn't be shown
+    if (!selectedLoad || !showLoadDrawer) {
+      return null;
+    }
+
+    const pendingBids = bids.filter(bid => bid.status === 'pending');
+    const acceptedBids = bids.filter(bid => bid.status === 'accepted');
+    const rejectedBids = bids.filter(bid => bid.status === 'rejected');
+    const hasValidBids = bids.length > 0 && !bids[0]?.isError;
+
+    const getBidStatusColor = (status) => {
+      switch (status) {
+        case 'accepted': return '#4CAF50';
+        case 'rejected': return '#FF0000';
+        case 'pending': return '#FF8C00';
+        default: return '#A0AEC0';
+      }
+    };
+
+    const getBidStatusText = (status) => {
+      switch (status) {
+        case 'accepted': return 'ACCEPTED';
+        case 'rejected': return 'REJECTED';
+        case 'pending': return 'PENDING';
+        default: return 'UNKNOWN';
+      }
+    };
+
+    return (
+      <Modal
+        visible={showLoadDrawer}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeDrawer}
       >
         <TouchableOpacity
-          style={styles.drawerContainer}
+          style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
+          onPress={closeDrawer}
         >
-          <View style={styles.drawerHandle} />
-          <View style={styles.drawerHeader}>
-            <Text style={styles.drawerTitle}>Bids</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.drawerContainer}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.drawerHandle} />
 
-          <ScrollView style={styles.drawerContent}>
-            {selectedLoad && (
-              <View style={styles.bidsSection}>
-                {loadingBids ? (
-                  <Text style={styles.loadingText}>Loading bids...</Text>
-                ) : (
-                  bids.map((bid) => (
-                    <View key={bid.id} style={styles.bidCard}>
-                      <View style={styles.bidContent}>
-                        <View style={styles.bidLeft}>
-                          <View style={styles.driverAvatar}>
-                            <Text style={styles.driverInitials}>
-                              {bid.company.split(' ').map(word => word[0]).join('')}
-                            </Text>
-                          </View>
-                          <View style={styles.driverInfo}>
-                            <Text style={styles.driverName}>{bid.company}</Text>
-                            <View style={styles.driverStats}>
-                              <Text style={styles.rating}>⭐ {bid.rating}</Text>
-                              <Text style={styles.deliveries}>50 successful deliveries</Text>
+            <ScrollView style={styles.drawerContent}>
+              {selectedLoad && (
+                <View style={styles.bidsSection}>
+                  {loadingBids ? (
+                    <Text style={styles.loadingText}>Loading bids...</Text>
+                  ) : hasValidBids ? (
+                    <>
+                      {/* Accepted Bids */}
+                      {acceptedBids.length > 0 && (
+                        <View style={styles.bidsGroup}>
+                          <Text style={styles.bidsGroupTitle}>✅ Accepted Bids</Text>
+                          {acceptedBids.map((bid) => (
+                            <View key={bid.id} style={[styles.bidCard, styles.acceptedBidCard]}>
+                              <View style={styles.bidHeader}>
+                                <Text style={[styles.bidStatus, { color: getBidStatusColor(bid.status) }]}>
+                                  {getBidStatusText(bid.status)}
+                                </Text>
+                              </View>
+                              <View style={styles.bidContent}>
+                                <View style={styles.bidLeft}>
+                                  <View style={styles.driverAvatar}>
+                                    <Text style={styles.driverInitials}>
+                                      {bid.company.split(' ').map(word => word[0]).join('')}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.driverInfo}>
+                                    <Text style={styles.driverName}>{bid.company}</Text>
+                                    <View style={styles.driverStats}>
+                                      <Text style={styles.rating}>⭐ {bid.rating}</Text>
+                                      <Text style={styles.deliveries}>50 successful deliveries</Text>
+                                    </View>
+                                    <Text style={styles.deliveryTime}>{bid.deliveryTime}</Text>
+                                    <Text style={styles.bidPrice}>{bid.amount}</Text>
+                                    {bid.message && (
+                                      <Text style={styles.bidMessage}>Message: {bid.message}</Text>
+                                    )}
+                                  </View>
+                                </View>
+                                <View style={styles.bidActions}>
+                                  <Text style={styles.acceptedText}>ACCEPTED</Text>
+                                </View>
+                              </View>
                             </View>
-                            <Text style={styles.deliveryTime}>{bid.deliveryTime}</Text>
-                            <Text style={styles.bidPrice}>{bid.amount}</Text>
-                          </View>
+                          ))}
                         </View>
-                        <View style={styles.bidActions}>
-                          <TouchableOpacity style={styles.declineButton}>
-                            <Text style={styles.declineButtonText}>DECLINE</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.acceptButton}>
-                            <Text style={styles.acceptButtonText}>ACCEPT</Text>
-                          </TouchableOpacity>
+                      )}
+
+                      {/* Pending Bids */}
+                      {pendingBids.length > 0 && (
+                        <View style={styles.bidsGroup}>
+                          <Text style={styles.bidsGroupTitle}>⏳ Pending Bids</Text>
+                          {pendingBids.map((bid) => (
+                            <View key={bid.id} style={styles.bidCard}>
+                              <View style={styles.bidHeader}>
+                                <Text style={[styles.bidStatus, { color: getBidStatusColor(bid.status) }]}>
+                                  {getBidStatusText(bid.status)}
+                                </Text>
+                              </View>
+                              <View style={styles.bidContent}>
+                                <View style={styles.bidLeft}>
+                                  <View style={styles.driverAvatar}>
+                                    <Text style={styles.driverInitials}>
+                                      {bid.company.split(' ').map(word => word[0]).join('')}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.driverInfo}>
+                                    <Text style={styles.driverName}>{bid.company}</Text>
+                                    <View style={styles.driverStats}>
+                                      <Text style={styles.rating}>⭐ {bid.rating}</Text>
+                                      <Text style={styles.deliveries}>50 successful deliveries</Text>
+                                    </View>
+                                    <Text style={styles.deliveryTime}>{bid.deliveryTime}</Text>
+                                    <Text style={styles.bidPrice}>{bid.amount}</Text>
+                                    {bid.message && (
+                                      <Text style={styles.bidMessage}>Message: {bid.message}</Text>
+                                    )}
+                                  </View>
+                                </View>
+                                <View style={styles.bidActions}>
+                                  <TouchableOpacity
+                                    style={styles.declineButton}
+                                    onPress={() => handleDeclineBid(bid)}
+                                  >
+                                    <Text style={styles.declineButtonText}>DECLINE</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={styles.acceptButton}
+                                    onPress={() => handleAcceptBid(bid)}
+                                  >
+                                    <Text style={styles.acceptButtonText}>ACCEPT</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            </View>
+                          ))}
                         </View>
-                      </View>
+                      )}
+
+                      {/* Rejected Bids */}
+                      {rejectedBids.length > 0 && (
+                        <View style={styles.bidsGroup}>
+                          <Text style={styles.bidsGroupTitle}>❌ Rejected Bids</Text>
+                          {rejectedBids.map((bid) => (
+                            <View key={bid.id} style={[styles.bidCard, styles.rejectedBidCard]}>
+                              <View style={styles.bidHeader}>
+                                <Text style={[styles.bidStatus, { color: getBidStatusColor(bid.status) }]}>
+                                  {getBidStatusText(bid.status)}
+                                </Text>
+                              </View>
+                              <View style={styles.bidContent}>
+                                <View style={styles.bidLeft}>
+                                  <View style={styles.driverAvatar}>
+                                    <Text style={styles.driverInitials}>
+                                      {bid.company.split(' ').map(word => word[0]).join('')}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.driverInfo}>
+                                    <Text style={styles.driverName}>{bid.company}</Text>
+                                    <View style={styles.driverStats}>
+                                      <Text style={styles.rating}>⭐ {bid.rating}</Text>
+                                      <Text style={styles.deliveries}>50 successful deliveries</Text>
+                                    </View>
+                                    <Text style={styles.deliveryTime}>{bid.deliveryTime}</Text>
+                                    <Text style={styles.bidPrice}>{bid.amount}</Text>
+                                    {bid.message && (
+                                      <Text style={styles.bidMessage}>Message: {bid.message}</Text>
+                                    )}
+                                  </View>
+                                </View>
+                                <View style={styles.bidActions}>
+                                  <Text style={styles.rejectedText}>REJECTED</Text>
+                                </View>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <View style={styles.emptyBidsContainer}>
+                      <Text style={styles.emptyBidsTitle}>
+                        {bids[0]?.isError ? 'Error Loading Bids' : 'No Bids Yet'}
+                      </Text>
+                      <Text style={styles.emptyBidsMessage}>
+                        {bids[0]?.isError ? 'There was an error loading the bid information. Please try again.' : 'No drivers have submitted bids for this load yet.'}
+                      </Text>
                     </View>
-                  ))
-                )}
-              </View>
-            )}
-          </ScrollView>
+                  )}
+                </View>
+              )}
+            </ScrollView>
+          </TouchableOpacity>
         </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate('Dashboard')}
         >
           <Image style={styles.backIcon} source={back} />
         </TouchableOpacity>
@@ -224,12 +580,14 @@ const LoadBoardScreen = ({ navigation }) => {
         style={styles.content}
         contentContainerStyle={[
           styles.loadsList,
-          loads.length === 0 && styles.emptyScrollView
+          (myLoads.length === 0) && styles.emptyScrollView
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {loads.length > 0 ? (
-          loads.map((load) => (
+        {myLoads.length > 0 ? (
+          myLoads
+            .filter(l => (l.pickupAddress || l.deliveryAddress || '').toString().toLowerCase().includes(searchQuery.toLowerCase()))
+            .map((load) => (
             <LoadCard key={load.id} load={load} />
           ))
         ) : (
@@ -483,10 +841,102 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  drawerSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
   drawerContent: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
+  },
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#666',
+    paddingVertical: 20,
+  },
+  bidsGroup: {
+    marginBottom: 24,
+  },
+  bidsGroupTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  bidHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+  },
+  bidStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  acceptedBidCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+    backgroundColor: '#F8FFF8',
+  },
+  rejectedBidCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF0000',
+    backgroundColor: '#FFF8F8',
+  },
+  acceptedText: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  rejectedText: {
+    color: '#FF0000',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  bidMessage: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  emptyBidsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyBidsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  emptyBidsMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  closeEmptyButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    minWidth: 100,
+  },
+  closeEmptyButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   bidsSection: {
     marginBottom: 24,

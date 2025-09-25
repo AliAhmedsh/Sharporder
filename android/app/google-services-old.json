@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "820273361039",
+    "firebase_url": "https://gram-4a58a-default-rtdb.firebaseio.com",
+    "project_id": "gram-4a58a",
+    "storage_bucket": "gram-4a58a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:820273361039:android:31822932009e943577c0fa",
+        "android_client_info": {
+          "package_name": "com.weblahChatApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "820273361039-tu9ccoatkg8t47dlrj8c2vm7auu5u69t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnYorBdk9HkEtvtcyZacLDMy9EhJoD8W4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "820273361039-tu9ccoatkg8t47dlrj8c2vm7auu5u69t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
