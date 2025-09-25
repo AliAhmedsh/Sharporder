@@ -28,55 +28,76 @@ const { width: screenWidth } = Dimensions.get('window');
 
 const DriverLoadBoardScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const [acceptedLoads, setAcceptedLoads] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFare, setSelectedFare] = useState('');
+  const [customFare, setCustomFare] = useState('');
+  const [filters, setFilters] = useState({
+    vehicleType: '',
+    minPrice: '',
+    maxPrice: '',
+    route: '',
+    minRating: ''
+  });
+  // Realtime available loads (UI model)
+  const [availableLoads, setAvailableLoads] = useState([]);
+  const emptyClearTimeoutRef = useRef(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(300)).current;
 
-  // Load accepted loads for this driver
+  // Subscribe to available loads in real time
   useEffect(() => {
-    const loadAcceptedLoads = async () => {
-      if (!user?.uid) return;
-
-      setLoading(true);
-      try {
-        const result = await firebaseLoadsService.getMyAcceptedLoads(user.uid);
-        if (result.success) {
-          const ui = result.data.map((load) => ({
-            id: load.id,
-            _loadId: load.id,
-            route: `${load.pickupAddress || '-'} → ${load.deliveryAddress || '-'}`,
-            time: load.acceptedAt ? new Date(load.acceptedAt).toLocaleString() : 'Just accepted',
-            weight: load.weight ? `${load.weight} Kg` : '—',
-            dimensions: load.dimensions || '—',
-            vehicleType: load.truckType || 'Truck',
-            shipper: {
-              name: load.shipperName || 'Shipper',
-              rating: load.shipperRating || 4.5,
-              deliveries: load.shipperDeliveries || 0,
-            },
-            priceRange: typeof load.fareOffer === 'number' ? `₦${(load.fareOffer.toLocaleString?.() || load.fareOffer)}` : (load.fareOffer || '—'),
-            status: load.status,
-            acceptedAt: load.acceptedAt,
-            pickupAddress: load.pickupAddress,
-            deliveryAddress: load.deliveryAddress,
-          }));
-          setAcceptedLoads(ui);
+    let unsubscribe = null;
+    // No additional filters for now; can add truckType later
+    unsubscribe = realTimeService.subscribeToAvailableLoads((loads) => {
+      const count = Array.isArray(loads) ? loads.length : 0;
+      if (count > 0) {
+        if (emptyClearTimeoutRef.current) {
+          clearTimeout(emptyClearTimeoutRef.current);
+          emptyClearTimeoutRef.current = null;
         }
-      } catch (error) {
-        console.error('Error loading accepted loads:', error);
-      } finally {
-        setLoading(false);
+        // Map Firestore loads to UI model used by this screen
+        const ui = loads.map((l) => ({
+          id: l.id,
+          _loadId: l.id, // keep original id for actions
+          route: `${l.pickupAddress || '-'} → ${l.deliveryAddress || '-'}`,
+          time: l.createdAt ? (l.createdAt.toLocaleString?.() || new Date(l.createdAt).toLocaleString()) : 'Just now',
+          weight: l.weight ? `${l.weight} Kg` : '—',
+          dimensions: l.dimensions || '—',
+          vehicleType: l.truckType || 'Truck',
+          shipper: {
+            name: l.shipperName || 'Shipper',
+            rating: l.shipperRating || 4.5,
+            deliveries: l.shipperDeliveries || 0,
+          },
+          priceRange: typeof l.fareOffer === 'number' ? `₦${(l.fareOffer.toLocaleString?.() || l.fareOffer)}` : (l.fareOffer || '—'),
+          minPrice: typeof l.fareOffer === 'number' ? l.fareOffer : 0,
+          maxPrice: typeof l.fareOffer === 'number' ? l.fareOffer : 0,
+        }));
+        setAvailableLoads(ui);
+      } else {
+        if (emptyClearTimeoutRef.current) {
+          clearTimeout(emptyClearTimeoutRef.current);
+        }
+        emptyClearTimeoutRef.current = setTimeout(() => {
+          setAvailableLoads([]);
+          emptyClearTimeoutRef.current = null;
+        }, 800);
+      }
+    }, {});
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      if (emptyClearTimeoutRef.current) {
+        clearTimeout(emptyClearTimeoutRef.current);
+        emptyClearTimeoutRef.current = null;
       }
     };
-
-    loadAcceptedLoads();
-  }, [user?.uid]);
+  }, []);
 
   // Animate modal entrance
   useEffect(() => {
@@ -111,31 +132,28 @@ const DriverLoadBoardScreen = ({ navigation }) => {
     >
       <View style={styles.routeContainer}>
         <View style={styles.routeIconWrapper}>
-          <Text style={styles.routeIcon}>✅</Text>
+          <Text style={styles.routeIcon}>🚛</Text>
         </View>
         <Text style={styles.routeText}>{load.route}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: load.status === 'accepted' ? '#4CAF50' : '#FF9800' }]}>
-          <Text style={styles.statusText}>{load.status === 'accepted' ? 'ACCEPTED' : 'PENDING'}</Text>
-        </View>
       </View>
-
+      
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>⏰</Text>
-          <Text style={styles.detailText}>{load.time.split(',')[0]}</Text>
+          <Text style={styles.detailText}>{load.time}</Text>
         </View>
-
+        
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>📦</Text>
           <Text style={styles.detailText}>{load.weight}</Text>
         </View>
-
+        
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>🚚</Text>
           <Text style={styles.detailText}>{load.vehicleType}</Text>
         </View>
       </View>
-
+      
       <View style={styles.shipperContainer}>
         <View style={styles.shipperAvatar}>
           <Text style={styles.shipperInitials}>
@@ -150,7 +168,7 @@ const DriverLoadBoardScreen = ({ navigation }) => {
           </View>
         </View>
       </View>
-
+      
       <View style={styles.cardFooter}>
         <Text style={styles.priceText}>{load.priceRange}</Text>
         <View style={styles.viewDetailsButton}>
@@ -162,22 +180,27 @@ const DriverLoadBoardScreen = ({ navigation }) => {
 
   const EmptyState = () => (
     <View style={styles.emptyStateContainer}>
-      <Text style={styles.emptyStateTitle}>No Accepted Loads</Text>
-      <Text style={styles.emptyStateMessage}>
-        You haven't accepted any loads yet. Browse the Load Board to find available loads and submit bids.
-      </Text>
-      <TouchableOpacity
-        style={styles.browseButton}
-        onPress={() => navigation.navigate('DriverLoadBoard')}
+      <Image source={emptyloadboard2} style={styles.emptyStateImage} />
+      <TouchableOpacity 
+        style={styles.refreshButton} 
+        onPress={() => {
+          setSearchQuery('');
+          clearAllFilters();
+        }}
         activeOpacity={0.8}
       >
-        <Text style={styles.browseButtonText}>BROWSE LOAD BOARD</Text>
+        <Text style={styles.refreshButtonText}>REFRESH</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={clearAllFilters} activeOpacity={0.8}>
+        <Text style={styles.removeFiltersText}>REMOVE FILTERS</Text>
       </TouchableOpacity>
     </View>
   );
 
   const DetailsModal = () => {
     if (!selectedLoad) return null;
+
+    const fareOptions = ['NGN 15,500', 'NGN 16,000', 'NGN 17,000', 'NGN 18,000'];
 
     return (
       <Modal
@@ -187,13 +210,13 @@ const DriverLoadBoardScreen = ({ navigation }) => {
         onRequestClose={() => setShowDetailsModal(false)}
         statusBarTranslucent
       >
-        <TouchableOpacity
-          style={styles.modalBackdrop}
-          activeOpacity={1}
+        <TouchableOpacity 
+          style={styles.modalBackdrop} 
+          activeOpacity={1} 
           onPress={() => setShowDetailsModal(false)}
         >
           <View style={styles.detailsModalWrapper} onStartShouldSetResponder={() => true}>
-            <Animated.View
+            <Animated.View 
               style={[
                 styles.detailsModalContent,
                 {
@@ -204,7 +227,7 @@ const DriverLoadBoardScreen = ({ navigation }) => {
             >
               <View style={styles.modalPullBar} />
               <View style={styles.detailsHeader}>
-                <TouchableOpacity
+                <TouchableOpacity 
                   onPress={() => setShowDetailsModal(false)}
                   style={styles.backButtonModal}
                   activeOpacity={0.7}
@@ -215,32 +238,18 @@ const DriverLoadBoardScreen = ({ navigation }) => {
                 <View style={styles.headerSpacer} />
               </View>
 
-              <KeyboardAvoidingView
+              <KeyboardAvoidingView 
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={{ flex: 1 }}
               >
-                <ScrollView
-                  style={styles.detailsScrollView}
+                <ScrollView 
+                  style={styles.detailsScrollView} 
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.detailsScrollContent}
                 >
                   <View style={styles.mapContainer}>
                     <View style={styles.mapPlaceholder}>
-                      <View style={styles.pickupCircle}>
-                        <View style={styles.pickupIcon}>
-                          <Text style={styles.pickupEmoji}>📍</Text>
-                        </View>
-                        <Text style={styles.pickupLabel}>Pickup</Text>
-                      </View>
-
-                      <View style={styles.deliveryCircle}>
-                        <View style={styles.deliveryIcon}>
-                          <Text style={styles.deliveryEmoji}>🏁</Text>
-                        </View>
-                        <Text style={styles.deliveryLabel}>Delivery</Text>
-                      </View>
-
-                      <View style={styles.routeLine} />
+                      <Image source={require('../../assets/mini-map-2.png')} style={styles.mapImage} />
                     </View>
                   </View>
 
@@ -268,35 +277,14 @@ const DriverLoadBoardScreen = ({ navigation }) => {
                         <View style={styles.iconBadge}>
                           <Text style={styles.detailsIcon}>⏰</Text>
                         </View>
-                        <Text style={styles.detailsLabel}>Accepted: {selectedLoad.time.split(',')[0]}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.loadDetails}>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailTitle}>Pickup Address:</Text>
-                        <Text style={styles.detailValue}>{selectedLoad.pickupAddress || 'Not specified'}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailTitle}>Delivery Address:</Text>
-                        <Text style={styles.detailValue}>{selectedLoad.deliveryAddress || 'Not specified'}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailTitle}>Fare:</Text>
-                        <Text style={styles.detailValue}>{selectedLoad.priceRange}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailTitle}>Status:</Text>
-                        <View style={[styles.statusBadgeLarge, { backgroundColor: selectedLoad.status === 'accepted' ? '#4CAF50' : '#FF9800' }]}>
-                          <Text style={styles.statusTextLarge}>{selectedLoad.status === 'accepted' ? 'ACCEPTED' : 'PENDING'}</Text>
-                        </View>
+                        <Text style={styles.detailsLabel}>{selectedLoad.time.split(',')[1]}</Text>
                       </View>
                     </View>
 
                     <View style={styles.contactButtons}>
                       <TouchableOpacity style={styles.callButton} activeOpacity={0.8}>
                         <Text style={styles.callIcon}>📞</Text>
-                        <Text style={styles.callText}>Call Shipper</Text>
+                        <Text style={styles.callText}>Call driver</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.messageButton} activeOpacity={0.8}>
                         <Text style={styles.messageIcon}>💬</Text>
@@ -304,19 +292,68 @@ const DriverLoadBoardScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     </View>
 
-                    <View style={styles.actionButtons}>
-                      <TouchableOpacity
-                        style={styles.startDeliveryButton}
-                        activeOpacity={0.9}
-                        onPress={() => {
-                          setShowDetailsModal(false);
-                          navigation.navigate('DriverOnTheWay', {
-                            loadId: selectedLoad._loadId,
-                            load: selectedLoad
-                          });
+                    <View style={styles.fareSection}>
+                      <Text style={styles.fareLabel}>Fare</Text>
+                      <TextInput
+                        style={styles.fareInput}
+                        placeholder="Enter your fare"
+                        placeholderTextColor="#999"
+                        value={customFare}
+                        onChangeText={setCustomFare}
+                        keyboardType="numeric"
+                      />
+                      
+                      <Text style={styles.preferredFareLabel}>Or select your preferred fare offer</Text>
+                      
+                      <View style={styles.fareOptions}>
+                        {fareOptions.map((fare, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={[
+                              styles.fareOption,
+                              selectedFare === fare && styles.fareOptionSelected
+                            ]}
+                            onPress={() => setSelectedFare(fare)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[
+                              styles.fareOptionText,
+                              selectedFare === fare && styles.fareOptionTextSelected
+                            ]}>
+                              {fare}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <TouchableOpacity style={styles.sendOfferButton} activeOpacity={0.9}
+                        onPress={async () => {
+                          try {
+                            const driverId = user?.uid || auth().currentUser?.uid;
+                            if (!driverId) return;
+
+                            // Submit a bid using the new bidding system
+                            const res = await firebaseLoadsService.submitBid(
+                              selectedLoad._loadId || selectedLoad.id,
+                              driverId,
+                              customFare || selectedFare || null,
+                              '' // message can be added later if needed
+                            );
+                            if (!res?.success) throw new Error(res?.error || 'Failed to submit bid');
+
+                            // Show success message
+                            Alert.alert(
+                              'Bid Submitted',
+                              'Your bid has been submitted successfully. The shipper will review it and get back to you.',
+                              [{ text: 'OK', onPress: () => setShowDetailsModal(false) }]
+                            );
+                          } catch (e) {
+                            console.error('Submit bid error:', e);
+                            Alert.alert('Error', 'Failed to submit bid. Please try again.');
+                          }
                         }}
                       >
-                        <Text style={styles.startDeliveryText}>🚚 START DELIVERY</Text>
+                        <Text style={styles.sendOfferText}>SUBMIT BID</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -485,60 +522,80 @@ const DriverLoadBoardScreen = ({ navigation }) => {
   };
 
   const clearAllFilters = () => {
+    setFilters({
+      vehicleType: '',
+      minPrice: '',
+      maxPrice: '',
+      route: '',
+      minRating: ''
+    });
     setSearchQuery('');
   };
 
   const applyFiltersToLoads = (loads) => {
     return loads.filter(load => {
-      const matchesSearch =
+      const matchesSearch = 
         load.route.toLowerCase().includes(searchQuery.toLowerCase()) ||
         load.shipper.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesSearch;
+      const matchesVehicleType = !filters.vehicleType || load.vehicleType === filters.vehicleType;
+
+      const matchesPrice = (!filters.minPrice || load.minPrice >= parseInt(filters.minPrice)) &&
+                          (!filters.maxPrice || load.maxPrice <= parseInt(filters.maxPrice));
+
+      const matchesRating = !filters.minRating || 
+                           load.shipper.rating >= parseFloat(filters.minRating.replace('+', ''));
+
+      return matchesSearch && matchesVehicleType && matchesPrice && matchesRating;
     });
   };
 
-  const filteredLoads = applyFiltersToLoads(acceptedLoads);
+  const filteredLoads = applyFiltersToLoads(availableLoads);
+  const hasActiveFilters = Object.values(filters).some(filter => filter !== '') || searchQuery !== '';
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
       <View style={styles.header}>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
           <Image source={back} style={styles.backIcon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Loads</Text>
+        <Text style={styles.headerTitle}>Load Board</Text>
         <View style={styles.headerSpacer} />
       </View>
-
+      
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Image source={search} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search my loads"
+            placeholder="Search Load Board"
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#999"
           />
         </View>
+        <TouchableOpacity 
+          style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
+          onPress={() => setShowFilterModal(true)}
+          activeOpacity={0.8}
+        >
+          <Image source={filter} style={styles.filterIcon} />
+          {hasActiveFilters && <View style={styles.filterBadge} />}
+        </TouchableOpacity>
         <TouchableOpacity style={styles.menuButton} activeOpacity={0.8}>
           <Image source={menu} style={styles.menuIcon} />
         </TouchableOpacity>
       </View>
-
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your accepted loads...</Text>
-        </View>
-      ) : filteredLoads.length === 0 ? (
+      
+      {filteredLoads.length === 0 ? (
         <EmptyState />
       ) : (
-        <ScrollView
+        <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.loadsList}
           showsVerticalScrollIndicator={false}
@@ -549,9 +606,11 @@ const DriverLoadBoardScreen = ({ navigation }) => {
         </ScrollView>
       )}
 
+      <FilterModal />
       <DetailsModal />
     </View>
   );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -822,12 +881,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   refreshButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  statusBadge: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  removeFiltersText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  // Filter Modal Styles
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
     position: 'relative',
   },

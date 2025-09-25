@@ -55,14 +55,13 @@ export const firebaseLoadsService = {
     }
   },
 
-  // Get accepted loads for a specific driver
-  getMyAcceptedLoads: async (driverId) => {
+  // Get loads for a specific user (shipper's loads)
+  getMyLoads: async (userId) => {
     try {
       const q = query(
         collection(db, 'loads'),
-        where('driverId', '==', driverId),
-        where('status', '==', 'accepted'),
-        orderBy('acceptedAt', 'desc')
+        where('shipperId', '==', userId),
+        orderBy('createdAt', 'desc')
       );
 
       const querySnapshot = await getDocs(q);
@@ -73,13 +72,12 @@ export const firebaseLoadsService = {
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
-          acceptedAt: doc.data().acceptedAt?.toDate?.() || new Date(doc.data().acceptedAt),
         });
       });
 
       return { success: true, data: loads };
     } catch (error) {
-      console.error('Error fetching accepted loads:', error);
+      console.error('Error fetching my loads:', error);
       return { success: false, error: error.message };
     }
   },
