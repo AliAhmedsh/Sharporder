@@ -1,19 +1,17 @@
-import React, { useState } from 'react';
+import {useNavigation} from '@react-navigation/native';
+import React, {useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  SafeAreaView,
-  StatusBar,
   Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useAppContext } from '../../context/AppContext';
-import { useNavigation } from '@react-navigation/native';
+import {useAppContext} from '../../context/AppContext';
 
-const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
+const DeliveryDetailsScreen = ({visible, onClose = () => {}}) => {
   const {
     formData,
     setFormData,
@@ -21,13 +19,15 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
     setShowTruckSelector,
     truckTypes,
   } = useAppContext();
-  
+
   const navigation = useNavigation();
   const [isReceiving, setIsReceiving] = useState(false);
 
   const handleContinue = () => {
     onClose();
-    navigation.navigate('TripDetails');
+    console.log('>>>---->', formData);
+
+    // navigation.navigate('TripDetails');
   };
 
   const handleClose = () => {
@@ -40,20 +40,19 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
       {/* Main Delivery Details Modal */}
       <Modal visible={visible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backdrop}
             activeOpacity={1}
             onPress={handleClose}
           />
           <View style={styles.modalContainer}>
             <View style={styles.dragHandle} />
-            
-            <ScrollView 
+
+            <ScrollView
               style={styles.formContainer}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
+              keyboardShouldPersistTaps="handled">
               <Text style={styles.pageTitle}>Delivery details</Text>
 
               <View style={styles.inputContainer}>
@@ -63,7 +62,7 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
                   placeholder="Enter here"
                   value={formData.pickupAddress}
                   onChangeText={text =>
-                    setFormData({ ...formData, pickupAddress: text })
+                    setFormData({...formData, pickupAddress: text})
                   }
                   placeholderTextColor="#C0C0C0"
                 />
@@ -76,7 +75,7 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
                   placeholder="Enter here"
                   value={formData.deliveryAddress}
                   onChangeText={text =>
-                    setFormData({ ...formData, deliveryAddress: text })
+                    setFormData({...formData, deliveryAddress: text})
                   }
                   placeholderTextColor="#C0C0C0"
                 />
@@ -84,11 +83,14 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
 
               <TouchableOpacity
                 style={styles.inputContainer}
-                onPress={() => setShowTruckSelector(true)}
-              >
+                onPress={() => setShowTruckSelector(true)}>
                 <Text style={styles.inputLabel}>Truck type</Text>
                 <View style={styles.selectInput}>
-                  <Text style={[styles.selectText, formData.truckType && styles.selectedText]}>
+                  <Text
+                    style={[
+                      styles.selectText,
+                      formData.truckType && styles.selectedText,
+                    ]}>
                     {formData.truckType || 'Select here'}
                   </Text>
                   <Text style={styles.selectArrow}>⌄</Text>
@@ -102,7 +104,7 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
                   placeholder="Enter here"
                   value={formData.loadDescription}
                   onChangeText={text =>
-                    setFormData({ ...formData, loadDescription: text })
+                    setFormData({...formData, loadDescription: text})
                   }
                   placeholderTextColor="#C0C0C0"
                 />
@@ -123,7 +125,7 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
                   placeholder="Enter here"
                   value={formData.recipientName}
                   onChangeText={text =>
-                    setFormData({ ...formData, recipientName: text })
+                    setFormData({...formData, recipientName: text})
                   }
                   placeholderTextColor="#C0C0C0"
                 />
@@ -136,7 +138,7 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
                   placeholder="+234 08012345678"
                   value={formData.recipientNumber}
                   onChangeText={text =>
-                    setFormData({ ...formData, recipientNumber: text })
+                    setFormData({...formData, recipientNumber: text})
                   }
                   keyboardType="phone-pad"
                   placeholderTextColor="#C0C0C0"
@@ -145,18 +147,21 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
 
               <View style={styles.toggleContainer}>
                 <Text style={styles.toggleText}>I'm receiving it</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.toggle, isReceiving && styles.toggleActive]}
-                  onPress={() => setIsReceiving(!isReceiving)}
-                >
-                  <View style={[styles.toggleThumb, isReceiving && styles.toggleThumbActive]} />
+                  onPress={() => setIsReceiving(!isReceiving)}>
+                  <View
+                    style={[
+                      styles.toggleThumb,
+                      isReceiving && styles.toggleThumbActive,
+                    ]}
+                  />
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity
                 style={styles.fullWidthButton}
-                onPress={handleContinue}
-              >
+                onPress={handleContinue}>
                 <Text style={styles.fullWidthButtonText}>CONTINUE</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -167,7 +172,7 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
       {/* Truck Selector Modal - Separate from main modal */}
       <Modal visible={showTruckSelector} transparent animationType="slide">
         <View style={styles.truckModalOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.truckBackdrop}
             activeOpacity={1}
             onPress={() => setShowTruckSelector(false)}
@@ -175,26 +180,32 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
           <View style={styles.truckModal}>
             <View style={styles.dragHandle} />
             <Text style={styles.modalTitle}>Select your truck</Text>
-            <ScrollView 
+            <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.truckScrollContent}
-            >
+              contentContainerStyle={styles.truckScrollContent}>
               <TouchableOpacity
                 style={[
                   styles.truckOption,
-                  formData.truckType === 'Standard Rigid Dump Truck' && styles.selectedTruckOption,
+                  formData.truckType === 'Standard Rigid Dump Truck' &&
+                    styles.selectedTruckOption,
                 ]}
                 onPress={() => {
-                  setFormData({ ...formData, truckType: 'Standard Rigid Dump Truck' });
+                  setFormData({
+                    ...formData,
+                    truckType: 'Standard Rigid Dump Truck',
+                  });
                   setShowTruckSelector(false);
-                }}
-              >
+                }}>
                 <View style={styles.truckIconContainer}>
                   <Text style={styles.truckIcon}>🚛</Text>
                 </View>
                 <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>Standard Rigid Dump Truck</Text>
-                  <Text style={styles.truckSpec}>Capacity: 10-30 cubic yards</Text>
+                  <Text style={styles.truckName}>
+                    Standard Rigid Dump Truck
+                  </Text>
+                  <Text style={styles.truckSpec}>
+                    Capacity: 10-30 cubic yards
+                  </Text>
                   <Text style={styles.truckSpec}>Load weight: 15-25 tons</Text>
                   <Text style={styles.truckSpec}>Tyres: 6</Text>
                 </View>
@@ -203,19 +214,24 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
               <TouchableOpacity
                 style={[
                   styles.truckOption,
-                  formData.truckType === 'Articulated Dump Truck' && styles.selectedTruckOption,
+                  formData.truckType === 'Articulated Dump Truck' &&
+                    styles.selectedTruckOption,
                 ]}
                 onPress={() => {
-                  setFormData({ ...formData, truckType: 'Articulated Dump Truck' });
+                  setFormData({
+                    ...formData,
+                    truckType: 'Articulated Dump Truck',
+                  });
                   setShowTruckSelector(false);
-                }}
-              >
+                }}>
                 <View style={styles.truckIconContainer}>
                   <Text style={styles.truckIcon}>🚛</Text>
                 </View>
                 <View style={styles.truckDetails}>
                   <Text style={styles.truckName}>Articulated Dump Truck</Text>
-                  <Text style={styles.truckSpec}>Capacity: 25-45 cubic yards</Text>
+                  <Text style={styles.truckSpec}>
+                    Capacity: 25-45 cubic yards
+                  </Text>
                   <Text style={styles.truckSpec}>Load weight: 35-45 tons</Text>
                   <Text style={styles.truckSpec}>Tyres: 10</Text>
                 </View>
@@ -224,20 +240,24 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
               <TouchableOpacity
                 style={[
                   styles.truckOption,
-                  formData.truckType === 'Transfer Dump Truck' && styles.selectedTruckOption,
+                  formData.truckType === 'Transfer Dump Truck' &&
+                    styles.selectedTruckOption,
                 ]}
                 onPress={() => {
-                  setFormData({ ...formData, truckType: 'Transfer Dump Truck' });
+                  setFormData({...formData, truckType: 'Transfer Dump Truck'});
                   setShowTruckSelector(false);
-                }}
-              >
+                }}>
                 <View style={styles.truckIconContainer}>
                   <Text style={styles.truckIcon}>🚛</Text>
                 </View>
                 <View style={styles.truckDetails}>
                   <Text style={styles.truckName}>Transfer Dump Truck</Text>
-                  <Text style={styles.truckSpec}>Capacity: 15-25 cubic yards</Text>
-                  <Text style={styles.truckSpec}>Load weight: 20-30 tons combined</Text>
+                  <Text style={styles.truckSpec}>
+                    Capacity: 15-25 cubic yards
+                  </Text>
+                  <Text style={styles.truckSpec}>
+                    Load weight: 20-30 tons combined
+                  </Text>
                   <Text style={styles.truckSpec}>Tyres: 8</Text>
                 </View>
               </TouchableOpacity>
@@ -245,19 +265,21 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
               <TouchableOpacity
                 style={[
                   styles.truckOption,
-                  formData.truckType === 'Super Dump Truck' && styles.selectedTruckOption,
+                  formData.truckType === 'Super Dump Truck' &&
+                    styles.selectedTruckOption,
                 ]}
                 onPress={() => {
-                  setFormData({ ...formData, truckType: 'Super Dump Truck' });
+                  setFormData({...formData, truckType: 'Super Dump Truck'});
                   setShowTruckSelector(false);
-                }}
-              >
+                }}>
                 <View style={styles.truckIconContainer}>
                   <Text style={styles.truckIcon}>🚛</Text>
                 </View>
                 <View style={styles.truckDetails}>
                   <Text style={styles.truckName}>Super Dump Truck</Text>
-                  <Text style={styles.truckSpec}>Capacity: 20-30 cubic yards</Text>
+                  <Text style={styles.truckSpec}>
+                    Capacity: 20-30 cubic yards
+                  </Text>
                   <Text style={styles.truckSpec}>Load weight: 26-33 tons</Text>
                   <Text style={styles.truckSpec}>Tyres: 12</Text>
                 </View>
@@ -266,19 +288,26 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
               <TouchableOpacity
                 style={[
                   styles.truckOption,
-                  formData.truckType === 'Semi-trailer End Dump Truck' && styles.selectedTruckOption,
+                  formData.truckType === 'Semi-trailer End Dump Truck' &&
+                    styles.selectedTruckOption,
                 ]}
                 onPress={() => {
-                  setFormData({ ...formData, truckType: 'Semi-trailer End Dump Truck' });
+                  setFormData({
+                    ...formData,
+                    truckType: 'Semi-trailer End Dump Truck',
+                  });
                   setShowTruckSelector(false);
-                }}
-              >
+                }}>
                 <View style={styles.truckIconContainer}>
                   <Text style={styles.truckIcon}>🚛</Text>
                 </View>
                 <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>Semi-trailer End Dump Truck</Text>
-                  <Text style={styles.truckSpec}>Capacity: 20-30 cubic yards</Text>
+                  <Text style={styles.truckName}>
+                    Semi-trailer End Dump Truck
+                  </Text>
+                  <Text style={styles.truckSpec}>
+                    Capacity: 20-30 cubic yards
+                  </Text>
                   <Text style={styles.truckSpec}>Load weight: 20-25 tons</Text>
                   <Text style={styles.truckSpec}>Tyres: 8</Text>
                 </View>
@@ -287,19 +316,26 @@ const DeliveryDetailsScreen = ({ visible, onClose = () => {} }) => {
               <TouchableOpacity
                 style={[
                   styles.truckOption,
-                  formData.truckType === 'Double/Triple Bottom Dump' && styles.selectedTruckOption,
+                  formData.truckType === 'Double/Triple Bottom Dump' &&
+                    styles.selectedTruckOption,
                 ]}
                 onPress={() => {
-                  setFormData({ ...formData, truckType: 'Double/Triple Bottom Dump' });
+                  setFormData({
+                    ...formData,
+                    truckType: 'Double/Triple Bottom Dump',
+                  });
                   setShowTruckSelector(false);
-                }}
-              >
+                }}>
                 <View style={styles.truckIconContainer}>
                   <Text style={styles.truckIcon}>🚛</Text>
                 </View>
                 <View style={styles.truckDetails}>
-                  <Text style={styles.truckName}>Double/Triple Bottom Dump</Text>
-                  <Text style={styles.truckSpec}>Capacity: 30-40 cubic yards</Text>
+                  <Text style={styles.truckName}>
+                    Double/Triple Bottom Dump
+                  </Text>
+                  <Text style={styles.truckSpec}>
+                    Capacity: 30-40 cubic yards
+                  </Text>
                   <Text style={styles.truckSpec}>Load weight: 40-50 tons</Text>
                   <Text style={styles.truckSpec}>Tyres: 14</Text>
                 </View>

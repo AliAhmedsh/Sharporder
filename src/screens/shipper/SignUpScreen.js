@@ -43,28 +43,28 @@ const SignUpScreen = ({navigation}) => {
       Alert.alert('Error', 'Please fill all required fields');
       return;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
-    
+
     if (formData.password.length < 6) {
       Alert.alert('Error', 'Password should be at least 6 characters');
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       // Create user with email and password
       const userCredential = await auth().createUserWithEmailAndPassword(
         formData.email.trim(),
         formData.password,
       );
-      
+
       const {uid, email} = userCredential.user;
-      
+
       // Add user data to Firestore
       await firestore().collection('users').doc(uid).set({
         uid: uid,
@@ -75,53 +75,52 @@ const SignUpScreen = ({navigation}) => {
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
-      
+
       // Show success message and navigate to dashboard
-      Alert.alert(
-        'Success',
-        'Account created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to ShipperApp which is the root of the shipper stack
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'ShipperApp' }],
-              });
-            },
+      Alert.alert('Success', 'Account created successfully!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Navigate to ShipperApp which is the root of the shipper stack
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'ShipperApp'}],
+            });
           },
-        ],
-      );
-      
+        },
+      ]);
     } catch (error) {
       console.error('Signup error:', error);
       let errorMessage = 'An error occurred during sign up. Please try again.';
-      
+
       try {
         // Safely access error properties
         const errorCode = error?.code;
         const errorMsg = error?.message || String(error);
-        
-        console.log('Error details:', { errorCode, errorMsg });
-        
+
+        console.log('Error details:', {errorCode, errorMsg});
+
         // Handle common Firebase auth errors
         if (errorCode === 'auth/email-already-in-use') {
           errorMessage = 'An account with this email already exists.';
         } else if (errorCode === 'auth/invalid-email') {
           errorMessage = 'The email address is not valid.';
         } else if (errorCode === 'auth/weak-password') {
-          errorMessage = 'The password is too weak. Please choose a stronger password (minimum 6 characters).';
+          errorMessage =
+            'The password is too weak. Please choose a stronger password (minimum 6 characters).';
         } else if (errorCode === 'auth/operation-not-allowed') {
           errorMessage = 'Email/password accounts are not enabled.';
         } else if (errorMsg) {
-          errorMessage = typeof errorMsg === 'string' ? errorMsg : 'An unknown error occurred.';
+          errorMessage =
+            typeof errorMsg === 'string'
+              ? errorMsg
+              : 'An unknown error occurred.';
         }
       } catch (nestedError) {
         console.error('Error processing error message:', nestedError);
         errorMessage = 'An unexpected error occurred. Please try again later.';
       }
-      
+
       // Show error message to user
       if (typeof Alert.alert === 'function') {
         Alert.alert('Sign Up Failed', errorMessage);

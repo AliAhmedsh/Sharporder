@@ -1,52 +1,61 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  SafeAreaView,
-  StatusBar,
-  Keyboard,
-  Button,
-  ScrollView,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableOpacity,
-  Image,
-  Animated,
-  Easing,
-  Modal,
   Alert,
+  Animated,
+  Dimensions,
+  Easing,
+  Image,
+  Keyboard,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import MapView from 'react-native-maps';
-import DeliveryDetailsScreen from './DeliveryDetailsScreen';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import hamburger from '../../assets/icons/hamburger.png';
 import headset from '../../assets/icons/headset.png';
 import help from '../../assets/icons/help.png';
-import payments from '../../assets/icons/payments.png';
-import shipments from '../../assets/icons/shipments.png';
 import loadboard from '../../assets/icons/loadboard.png';
-import search from '../../assets/icons/search.png';
 import logout from '../../assets/icons/logout.png';
+import payments from '../../assets/icons/payments.png';
+import search from '../../assets/icons/search.png';
+import shipments from '../../assets/icons/shipments.png';
+import DeliveryDetailsScreen from './DeliveryDetailsScreen';
 
-import { useAuth } from '../../context/AuthContext';
+import {useAuth} from '../../context/AuthContext';
 
-const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSuggestionPress }) => {
-  const suggestions = ['Home', 'Office', 'Warehouse', 'Airport', 'Mall', 'Harbor', 'Central Park'];
+const BookingSearch = ({
+  query,
+  setQuery,
+  searchLocation,
+  onFocusSearch,
+  onSuggestionPress,
+}) => {
+  const suggestions = [
+    'Home',
+    'Office',
+    'Warehouse',
+    'Airport',
+    'Mall',
+    'Harbor',
+    'Central Park',
+  ];
   const filtered = query
     ? suggestions.filter(s => s.toLowerCase().includes(query.toLowerCase()))
     : suggestions.slice(0, 4);
   return (
     <View>
       <Text style={styles.bookingTitle}>Book your delivery</Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.searchContainer}
         onPress={onFocusSearch}
-        activeOpacity={0.7}
-      >
+        activeOpacity={0.7}>
         <Image source={search} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
@@ -59,14 +68,15 @@ const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSugge
           blurOnSubmit={false}
         />
       </TouchableOpacity>
-      <ScrollView style={styles.suggestionsContainer} contentContainerStyle={styles.suggestionsContent}>
+      <ScrollView
+        style={styles.suggestionsContainer}
+        contentContainerStyle={styles.suggestionsContent}>
         {filtered.map(item => (
           <TouchableOpacity
             key={item}
             style={styles.suggestionItem}
             activeOpacity={0.7}
-            onPress={() => onSuggestionPress?.(item)}
-          >
+            onPress={() => onSuggestionPress?.(item)}>
             <Text style={styles.suggestionText}>{item}</Text>
           </TouchableOpacity>
         ))}
@@ -75,10 +85,10 @@ const BookingSearch = ({ query, setQuery, searchLocation, onFocusSearch, onSugge
   );
 };
 
-const { height, width: screenWidth } = Dimensions.get('window');
+const {height, width: screenWidth} = Dimensions.get('window');
 
-const DashboardScreen = ({ navigation }) => {
-  const { signOut } = useAuth();
+const DashboardScreen = ({navigation}) => {
+  const {signOut} = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -93,11 +103,14 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
   const bottomSheetHeight = Math.round(height * 0.8);
-  const PEEK_HEIGHT = 200;
-  const bottomSheetTranslateY = useRef(new Animated.Value(bottomSheetHeight - PEEK_HEIGHT)).current;
+  const PEEK_HEIGHT = 400;
+  const bottomSheetTranslateY = useRef(
+    new Animated.Value(bottomSheetHeight - PEEK_HEIGHT),
+  ).current;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [showSidePanel, setShowSidePanel] = useState(false);
+  const [address, setAddress] = useState(false);
   const DRAWER_WIDTH = Math.round(screenWidth * 0.75);
   const drawerTranslateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -108,10 +121,10 @@ const DashboardScreen = ({ navigation }) => {
   }, [bottomSheetHeight]);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+    const showSub = Keyboard.addListener('keyboardDidShow', e => {
       const kh = e?.endCoordinates?.height || 0;
       setKeyboardHeight(kh);
-      
+
       if (!isSheetOpen) {
         openBookingSheet();
       }
@@ -127,7 +140,7 @@ const DashboardScreen = ({ navigation }) => {
 
   const openBookingSheet = () => {
     if (isSheetOpen) return;
-    
+
     Animated.timing(bottomSheetTranslateY, {
       toValue: 0,
       duration: 250,
@@ -136,7 +149,7 @@ const DashboardScreen = ({ navigation }) => {
     }).start(() => setIsSheetOpen(true));
   };
 
-  const handleSuggestionPress = (item) => {
+  const handleSuggestionPress = item => {
     setQuery(item);
     searchLocation();
     navigation?.navigate && navigation.navigate('DeliveryDetails');
@@ -189,7 +202,7 @@ const DashboardScreen = ({ navigation }) => {
       const results = JSON.parse(text); // parse manually
 
       if (results.length > 0) {
-        const { lat, lon, display_name } = results[0];
+        const {lat, lon, display_name} = results[0];
         const newRegion = {
           latitude: parseFloat(lat),
           longitude: parseFloat(lon),
@@ -198,7 +211,7 @@ const DashboardScreen = ({ navigation }) => {
         };
 
         setRegion(newRegion);
-        setMarker({ latitude: parseFloat(lat), longitude: parseFloat(lon) });
+        setMarker({latitude: parseFloat(lat), longitude: parseFloat(lon)});
         mapRef.current?.animateToRegion(newRegion, 1000);
         Keyboard.dismiss();
         setTimeout(() => {
@@ -235,7 +248,7 @@ const DashboardScreen = ({ navigation }) => {
 
   const openSidePanel = () => {
     setShowSidePanel(true);
-    
+
     Animated.parallel([
       Animated.timing(drawerTranslateX, {
         toValue: 0,
@@ -247,13 +260,13 @@ const DashboardScreen = ({ navigation }) => {
         toValue: 1,
         duration: 220,
         useNativeDriver: true,
-      })
+      }),
     ]).start();
   };
 
   const closeSidePanel = () => {
     overlayOpacity.setValue(0);
-    
+
     Animated.timing(drawerTranslateX, {
       toValue: -DRAWER_WIDTH,
       duration: 200,
@@ -269,31 +282,35 @@ const DashboardScreen = ({ navigation }) => {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
-          style={{ width: '100%', flex: 1 }}
+          style={{width: '100%', flex: 1}}
           initialRegion={region}
           onRegionChangeComplete={region => onRegionChange(region)}
           showsUserLocation={true}
-          showsMyLocationButton={true}
-        ></MapView>
+          showsMyLocationButton={true}></MapView>
         {isSheetOpen && (
           <TouchableOpacity
             activeOpacity={1}
             onPress={closeBookingSheet}
-            style={[styles.sheetOverlay, { bottom: bottomSheetHeight - keyboardHeight }]}
+            style={[
+              styles.sheetOverlay,
+              {bottom: bottomSheetHeight - keyboardHeight},
+            ]}
           />
         )}
         <Animated.View
           style={[
             styles.bottomSheet,
-            { height: bottomSheetHeight, bottom: -keyboardHeight, transform: [{ translateY: bottomSheetTranslateY }] },
-          ]}
-        >
+            {
+              height: bottomSheetHeight,
+              bottom: -keyboardHeight,
+              transform: [{translateY: bottomSheetTranslateY}],
+            },
+          ]}>
           <View style={styles.sheetHandle} />
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1, padding: 16 }}
+            contentContainerStyle={{flexGrow: 1, padding: 16}}
             style={styles.bookingCard}
-            keyboardShouldPersistTaps="always"
-          >
+            keyboardShouldPersistTaps="always">
             {step === 0 ? (
               <BookingSearch
                 query={query}
@@ -312,17 +329,16 @@ const DashboardScreen = ({ navigation }) => {
       {showSidePanel && (
         <Animated.View
           style={[
-            styles.overlay, 
-            { 
+            styles.overlay,
+            {
               left: DRAWER_WIDTH,
-              opacity: overlayOpacity 
-            }
-          ]}
-        >
+              opacity: overlayOpacity,
+            },
+          ]}>
           <TouchableOpacity
             activeOpacity={1}
             onPress={closeSidePanel}
-            style={{ flex: 1 }}
+            style={{flex: 1}}
           />
         </Animated.View>
       )}
@@ -332,15 +348,18 @@ const DashboardScreen = ({ navigation }) => {
           styles.drawerContainer,
           {
             width: DRAWER_WIDTH,
-            transform: [{ translateX: drawerTranslateX }],
+            transform: [{translateX: drawerTranslateX}],
           },
-        ]}
-      >
-        <ScrollView contentContainerStyle={{ paddingTop: 60 }}>
-        <View style={styles.drawerProfile}>
-            <View style={styles.drawerAvatar}><Text style={styles.drawerAvatarText}>VV</Text></View>
+        ]}>
+        <ScrollView contentContainerStyle={{paddingTop: 60}}>
+          <View style={styles.drawerProfile}>
+            <View style={styles.drawerAvatar}>
+              <Text style={styles.drawerAvatarText}>VV</Text>
+            </View>
             <View style={styles.drawerInfo}>
-              <Text style={styles.drawerBusinessName}>Vonsmallhousen Ventures</Text>
+              <Text style={styles.drawerBusinessName}>
+                Vonsmallhousen Ventures
+              </Text>
               <View style={styles.drawerRating}>
                 <Text style={styles.drawerStar}>⭐</Text>
                 <Text style={styles.drawerRatingText}>4.89</Text>
@@ -349,60 +368,67 @@ const DashboardScreen = ({ navigation }) => {
           </View>
           <View style={styles.drawerMenu}>
             {[
-              { 
-                id: 'payments', 
-                title: 'Payments', 
+              {
+                id: 'payments',
+                title: 'Payments',
                 icon: payments,
-                onPress: closeSidePanel
+                onPress: closeSidePanel,
               },
-              { 
-                id: 'shipments', 
-                title: 'My shipments', 
+              {
+                id: 'shipments',
+                title: 'My shipments',
                 icon: shipments,
                 onPress: () => {
                   closeSidePanel();
                   navigation.navigate('MyShipments');
-                }
+                },
               },
-              { 
-                id: 'loadboard', 
-                title: 'Load board', 
+              {
+                id: 'loadboard',
+                title: 'Load board',
                 icon: loadboard,
                 onPress: () => {
                   closeSidePanel();
                   navigation.navigate('LoadBoard');
-                }
+                },
               },
-              { 
-                id: 'support', 
-                title: 'Support', 
+              {
+                id: 'support',
+                title: 'Support',
                 icon: headset,
-                onPress: closeSidePanel
+                onPress: closeSidePanel,
               },
-              { 
-                id: 'about', 
-                title: 'About', 
+              {
+                id: 'about',
+                title: 'About',
                 icon: help,
-                onPress: closeSidePanel
+                onPress: closeSidePanel,
               },
-              { 
-                id: 'logout', 
-                title: 'Logout', 
+              {
+                id: 'logout',
+                title: 'Logout',
                 icon: logout,
                 onPress: handleLogout,
-                isLogout: true
+                isLogout: true,
               },
             ].map((item, idx, arr) => (
               <View key={item.id}>
                 <TouchableOpacity
                   style={styles.drawerItem}
                   activeOpacity={0.7}
-                  onPress={item.onPress}
-                >
+                  onPress={item.onPress}>
                   <Image source={item.icon} style={styles.menuIcon} />
-                  <Text style={[styles.menuText, item.isLogout && styles.logoutText]}>{item.title}</Text>
+                  <Text
+                    style={[
+                      styles.menuText,
+                      item.isLogout && styles.logoutText,
+                    ]}>
+                    {item.title}
+                  </Text>
                 </TouchableOpacity>
-                {idx < arr.length - 1 && <View style={styles.drawerSeparator} />}
+                {idx < arr.length - 1 && (
+                  <View style={styles.drawerSeparator} />
+                )}
               </View>
             ))}
           </View>
@@ -414,22 +440,20 @@ const DashboardScreen = ({ navigation }) => {
           style={styles.hamburgerButton}
           onPress={openSidePanel}
           activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
           <View style={styles.hamburgerButtonContainer}>
             <Image source={hamburger} style={styles.hamburgerIcon} />
           </View>
         </TouchableOpacity>
       )}
-
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  mapContainer: { flex: 1 },
-  map: { flex: 1 },
+  container: {flex: 1, backgroundColor: '#ffffff'},
+  mapContainer: {flex: 1},
+  map: {flex: 1},
   bookingCard: {},
   bookingTitle: {
     fontSize: 20,
@@ -447,8 +471,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#F8F8F8',
   },
-  searchIcon: { width: 20, height: 20, marginRight: 10, color: '#999999' },
-  searchInput: { flex: 1, fontSize: 16, color: '#333333' },
+  searchIcon: {width: 20, height: 20, marginRight: 10, color: '#999999'},
+  searchInput: {flex: 1, fontSize: 16, color: '#333333'},
   hamburgerButton: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 60 : 20,
@@ -495,11 +519,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
   },
   drawerProfile: {
-    flexDirection: 'row',        
-    alignItems: 'center',        
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
@@ -601,7 +625,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
+    shadowOffset: {width: 0, height: -2},
   },
   sheetOverlay: {
     ...StyleSheet.absoluteFillObject,

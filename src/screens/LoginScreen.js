@@ -1,26 +1,24 @@
-import React, {useState, useEffect} from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useNavigation} from '@react-navigation/native';
+import React, {useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  SafeAreaView,
-  StatusBar,
-  Image,
-  Alert,
   ActivityIndicator,
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import eye from '../assets/icons/eye.png';
+import logo from '../assets/icons/logo.png';
 import {useAppContext} from '../context/AppContext';
 import {useAuth} from '../context/AuthContext';
-import logo from '../assets/icons/logo.png';
-import eye from '../assets/icons/eye.png';
-import {useNavigation} from '@react-navigation/native';
 
 const LoginScreen = ({navigation}) => {
-  const {navigate} = useNavigation();
   const {formData, setFormData} = useAppContext();
   const {signIn, resetPassword, loading} = useAuth();
 
@@ -58,7 +56,7 @@ const LoginScreen = ({navigation}) => {
     try {
       setLoginError('');
       console.log('Attempting to log in...');
-      
+
       const result = await signIn(email, formData.password);
       console.log('Sign in result:', result);
 
@@ -75,24 +73,29 @@ const LoginScreen = ({navigation}) => {
     } catch (error) {
       console.error('Login error:', error);
       let errorMessage = 'An unexpected error occurred. Please try again.';
-      
+
       // Handle common Firebase auth errors
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      if (
+        error.code === 'auth/user-not-found' ||
+        error.code === 'auth/wrong-password'
+      ) {
         errorMessage = 'Invalid email or password';
       } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed login attempts. Please try again later.';
+        errorMessage =
+          'Too many failed login attempts. Please try again later.';
       } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'This account has been disabled. Please contact support.';
+        errorMessage =
+          'This account has been disabled. Please contact support.';
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       console.error('Login error details:', {
         code: error.code,
         message: error.message,
-        error: error
+        error: error,
       });
-      
+
       setLoginError(errorMessage);
       Alert.alert('Error', errorMessage);
     }

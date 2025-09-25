@@ -8,7 +8,8 @@ import {
   where,
   orderBy,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from '@react-native-firebase/firestore';
 
 // Initialize Firestore
