@@ -11,7 +11,11 @@ import {
 } from 'react-native';
 import {useAppContext} from '../../context/AppContext';
 
-const DeliveryDetailsScreen = ({visible, onClose = () => {}}) => {
+const DeliveryDetailsScreen = ({
+  visible,
+  onClose = () => {},
+  onContinue = () => {},
+}) => {
   const {
     formData,
     setFormData,
@@ -25,9 +29,13 @@ const DeliveryDetailsScreen = ({visible, onClose = () => {}}) => {
 
   const handleContinue = () => {
     onClose();
-    console.log('>>>---->', formData);
-
-    // navigation.navigate('TripDetails');
+    // If parent provided a custom continue handler (modal step flow), use it
+    if (typeof onContinue === 'function') {
+      onContinue();
+      return;
+    }
+    // Fallback to navigating to TripDetails screen
+    navigation.navigate('TripDetails');
   };
 
   const handleClose = () => {

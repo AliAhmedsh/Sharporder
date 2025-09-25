@@ -21,7 +21,8 @@ export const sampleData = {
       loadDescription: 'General cargo transport',
       weight: 5000,
       distance: 750,
-      price: 150000,
+      fareOffer: 150000, // Changed from price to fareOffer
+      price: 150000, // Keep both for compatibility
       pickupDate: new Date(Date.now() + 86400000).toISOString(),
       deliveryDate: new Date(Date.now() + 259200000).toISOString(),
       status: 'available',
@@ -36,7 +37,8 @@ export const sampleData = {
       loadDescription: 'Industrial equipment',
       weight: 8000,
       distance: 1200,
-      price: 250000,
+      fareOffer: 250000, // Changed from price to fareOffer
+      price: 250000, // Keep both for compatibility
       pickupDate: new Date(Date.now() + 172800000).toISOString(),
       deliveryDate: new Date(Date.now() + 432000000).toISOString(),
       status: 'available',
@@ -169,6 +171,39 @@ export const seedSampleData = async () => {
     return { success: true };
   } catch (error) {
     console.error('❌ Error seeding sample data:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Create a test load for bidding system
+export const createTestLoad = async () => {
+  try {
+    console.log('🧪 Creating test load for bidding system...');
+
+    const testLoad = {
+      shipperId: 'test-shipper-1',
+      pickupLocation: 'Lagos, Nigeria',
+      deliveryLocation: 'Abuja, Nigeria',
+      pickupAddress: '15 Bode Thomas Street, Surulere, Lagos',
+      deliveryAddress: '35 Hakeem Dickson Street, Lekki Phase 1, Lagos',
+      truckType: 'Flatbed Trailer',
+      loadDescription: 'Test cargo for bidding system',
+      weight: 5000,
+      distance: 750,
+      fareOffer: 150000,
+      price: 150000,
+      pickupDate: new Date(Date.now() + 86400000).toISOString(),
+      deliveryDate: new Date(Date.now() + 259200000).toISOString(),
+      status: 'available',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    const docRef = await addDoc(collection(db, 'loads'), testLoad);
+    console.log('✅ Test load created with ID:', docRef.id);
+    return { success: true, loadId: docRef.id };
+  } catch (error) {
+    console.error('❌ Error creating test load:', error);
     return { success: false, error: error.message };
   }
 };

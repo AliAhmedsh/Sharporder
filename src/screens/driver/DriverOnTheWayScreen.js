@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Image, Modal, Alert } from 'react-native';
 import MapView from 'react-native-maps';
 import pickup from '../../assets/pickup.png';
+import { firebaseLoadsService, firebaseShipmentsService } from '../../services/firebase';
 
 const DriverOnTheWayScreen = ({ route, navigation }) => {
-  const { price = 'NGN 15,000', load } = route.params || {};
+  const { price = 'NGN 15,000', load, shipmentId } = route.params || {};
   const [showDropOffModal, setShowDropOffModal] = useState(false);
   const [showOnTheWayModal, setShowOnTheWayModal] = useState(true);
   const [showBanner, setShowBanner] = useState(true);
@@ -96,9 +97,23 @@ const DriverOnTheWayScreen = ({ route, navigation }) => {
             <Text style={styles.modalSubtitle}>Inform the shipper that you are ready to unload at the destination.</Text>
             <TouchableOpacity 
               style={styles.modalPrimaryBtn}
-              onPress={() => {
-                setShowDropOffModal(false);
-                navigation.navigate('DriverDeliveryComplete', { price, load });
+              onPress={async () => {
+                try {
+                  // Mark shipment completed
+                  if (shipmentId) {
+                    await firebaseShipmentsService.updateShipmentStatus(shipmentId, 'completed');
+                  }
+                  // Mark load completed
+                  if (load?.id) {
+                    await firebaseLoadsService.updateLoad(load.id, { status: 'completed' });
+                  }
+                } catch (e) {
+                  console.error('Complete delivery error:', e);
+                  Alert.alert('Error', e.message || 'Could not complete delivery, but proceeding to summary.');
+                } finally {
+                  setShowDropOffModal(false);
+                  navigation.navigate('DriverDeliveryComplete', { price, load });
+                }
               }}
             >
               <Text style={styles.modalPrimaryBtnText}>DROP OFF</Text>

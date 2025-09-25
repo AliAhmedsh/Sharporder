@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+
 import { 
   View, 
   Text, 
@@ -19,10 +20,14 @@ import emptyloadboard2 from '../../assets/empty-load-board-2.png';
 import search from '../../assets/icons/search.png';
 import filter from '../../assets/icons/filter.png';
 import menu from '../../assets/icons/menu.png';
+import { realTimeService, firebaseLoadsService } from '../../services/firebase';
+import { useAuth } from '../../context/AuthContext';
+import auth from '@react-native-firebase/auth';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const DriverLoadBoardScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -36,110 +41,63 @@ const DriverLoadBoardScreen = ({ navigation }) => {
     route: '',
     minRating: ''
   });
+  // Realtime available loads (UI model)
+  const [availableLoads, setAvailableLoads] = useState([]);
+  const emptyClearTimeoutRef = useRef(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(300)).current;
 
-  // Sample load data for drivers
-  const availableLoads = [
-    {
-      id: 1,
-      route: 'Lagos → Abuja',
-      time: '20:50am, 01/09/2025',
-      weight: '134 Kg',
-      dimensions: '12"x12"',
-      vehicleType: 'Truck',
-      shipper: {
-        name: 'Chukwuebube Osinachi',
-        rating: 4.8,
-        deliveries: 120
-      },
-      priceRange: '₦120,000 - ₦150,000',
-      minPrice: 120000,
-      maxPrice: 150000
-    },
-    {
-      id: 2,
-      route: 'Lagos → Port Harcourt',
-      time: '14:30pm, 02/09/2025',
-      weight: '250 Kg',
-      dimensions: '15"x15"',
-      vehicleType: 'Van',
-      shipper: {
-        name: 'Mohammed Babaginda',
-        rating: 4.5,
-        deliveries: 85
-      },
-      priceRange: '₦80,000 - ₦100,000',
-      minPrice: 80000,
-      maxPrice: 100000
-    },
-    {
-      id: 3,
-      route: 'Abuja → Kano',
-      time: '08:15am, 03/09/2025',
-      weight: '500 Kg',
-      dimensions: '20"x20"',
-      vehicleType: 'Truck',
-      shipper: {
-        name: 'Oluwatomisin Alamu',
-        rating: 4.7,
-        deliveries: 200
-      },
-      priceRange: '₦90,000 - ₦120,000',
-      minPrice: 90000,
-      maxPrice: 120000
-    },
-    {
-      id: 4,
-      route: 'Lagos → Ibadan',
-      time: '16:45pm, 01/09/2025',
-      weight: '75 Kg',
-      dimensions: '8"x8"',
-      vehicleType: 'Bike',
-      shipper: {
-        name: 'Oghenetega Atufe',
-        rating: 4.9,
-        deliveries: 150
-      },
-      priceRange: '₦25,000 - ₦35,000',
-      minPrice: 25000,
-      maxPrice: 35000
-    },
-    {
-      id: 5,
-      route: 'Abuja → Lagos',
-      time: '12:00pm, 04/09/2025',
-      weight: '300 Kg',
-      dimensions: '18"x18"',
-      vehicleType: 'Truck',
-      shipper: {
-        name: 'Kunle Alamu',
-        rating: 4.6,
-        deliveries: 95
-      },
-      priceRange: '₦100,000 - ₦130,000',
-      minPrice: 100000,
-      maxPrice: 130000
-    },
-    {
-      id: 6,
-      route: 'Port Harcourt → Calabar',
-      time: '09:30am, 05/09/2025',
-      weight: '180 Kg',
-      dimensions: '14"x14"',
-      vehicleType: 'Van',
-      shipper: {
-        name: 'Adaora Okechukwu',
-        rating: 4.8,
-        deliveries: 175
-      },
-      priceRange: '₦60,000 - ₦80,000',
-      minPrice: 60000,
-      maxPrice: 80000
-    }
-  ];
+  // Subscribe to available loads in real time
+  useEffect(() => {
+    let unsubscribe = null;
+    // No additional filters for now; can add truckType later
+    unsubscribe = realTimeService.subscribeToAvailableLoads((loads) => {
+      const count = Array.isArray(loads) ? loads.length : 0;
+      if (count > 0) {
+        if (emptyClearTimeoutRef.current) {
+          clearTimeout(emptyClearTimeoutRef.current);
+          emptyClearTimeoutRef.current = null;
+        }
+        // Map Firestore loads to UI model used by this screen
+        const ui = loads.map((l) => ({
+          id: l.id,
+          _loadId: l.id, // keep original id for actions
+          route: `${l.pickupAddress || '-'} → ${l.deliveryAddress || '-'}`,
+          time: l.createdAt ? (l.createdAt.toLocaleString?.() || new Date(l.createdAt).toLocaleString()) : 'Just now',
+          weight: l.weight ? `${l.weight} Kg` : '—',
+          dimensions: l.dimensions || '—',
+          vehicleType: l.truckType || 'Truck',
+          shipper: {
+            name: l.shipperName || 'Shipper',
+            rating: l.shipperRating || 4.5,
+            deliveries: l.shipperDeliveries || 0,
+          },
+          priceRange: typeof l.fareOffer === 'number' ? `₦${(l.fareOffer.toLocaleString?.() || l.fareOffer)}` : (l.fareOffer || '—'),
+          minPrice: typeof l.fareOffer === 'number' ? l.fareOffer : 0,
+          maxPrice: typeof l.fareOffer === 'number' ? l.fareOffer : 0,
+        }));
+        setAvailableLoads(ui);
+      } else {
+        if (emptyClearTimeoutRef.current) {
+          clearTimeout(emptyClearTimeoutRef.current);
+        }
+        emptyClearTimeoutRef.current = setTimeout(() => {
+          setAvailableLoads([]);
+          emptyClearTimeoutRef.current = null;
+        }, 800);
+      }
+    }, {});
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      if (emptyClearTimeoutRef.current) {
+        clearTimeout(emptyClearTimeoutRef.current);
+        emptyClearTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Animate modal entrance
   useEffect(() => {
@@ -368,8 +326,34 @@ const DriverLoadBoardScreen = ({ navigation }) => {
                         ))}
                       </View>
 
-                      <TouchableOpacity style={styles.sendOfferButton} activeOpacity={0.9}>
-                        <Text style={styles.sendOfferText}>SEND OFFER</Text>
+                      <TouchableOpacity style={styles.sendOfferButton} activeOpacity={0.9}
+                        onPress={async () => {
+                          try {
+                            const driverId = user?.uid || auth().currentUser?.uid;
+                            if (!driverId) return;
+
+                            // Submit a bid using the new bidding system
+                            const res = await firebaseLoadsService.submitBid(
+                              selectedLoad._loadId || selectedLoad.id,
+                              driverId,
+                              customFare || selectedFare || null,
+                              '' // message can be added later if needed
+                            );
+                            if (!res?.success) throw new Error(res?.error || 'Failed to submit bid');
+
+                            // Show success message
+                            Alert.alert(
+                              'Bid Submitted',
+                              'Your bid has been submitted successfully. The shipper will review it and get back to you.',
+                              [{ text: 'OK', onPress: () => setShowDetailsModal(false) }]
+                            );
+                          } catch (e) {
+                            console.error('Submit bid error:', e);
+                            Alert.alert('Error', 'Failed to submit bid. Please try again.');
+                          }
+                        }}
+                      >
+                        <Text style={styles.sendOfferText}>SUBMIT BID</Text>
                       </TouchableOpacity>
                     </View>
                   </View>

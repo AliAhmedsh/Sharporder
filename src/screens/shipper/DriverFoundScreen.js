@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Modal, Image, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Modal, Image, TouchableWithoutFeedback, Alert } from 'react-native';
 import { useAppContext } from '../../context/AppContext';
+import { firebaseLoadsService, firebaseShipmentsService } from '../../services/firebase';
 
-const DriverFoundScreen = ({ navigation }) => {
+const DriverFoundScreen = ({ navigation, route }) => {
   const { 
     showDeliveryAlert, 
     setShowDeliveryAlert, 
@@ -11,6 +12,10 @@ const DriverFoundScreen = ({ navigation }) => {
     alertResolved, 
     setAlertResolved 
   } = useAppContext();
+
+  const loadId = route?.params?.loadId;
+  const initialLoad = route?.params?.load || null;
+  const [processing, setProcessing] = useState(false);
 
   // Local state to prevent double modals
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -34,6 +39,54 @@ const DriverFoundScreen = ({ navigation }) => {
     
     // Show delivery alert
     setShowDeliveryAlert(true);
+  };
+
+  const handleAcceptDriver = async () => {
+    if (processing) return;
+    try {
+      setProcessing(true);
+      const load = initialLoad;
+      if (!loadId || !load) {
+        Alert.alert('Error', 'No load information available.');
+        return;
+      }
+      if (!load.driverId) {
+        Alert.alert('No Driver', 'No driver has applied yet.');
+        return;
+      }
+
+      // Create a shipment in Firestore
+      const shipmentData = {
+        loadId,
+        shipperId: load.shipperId,
+        driverId: load.driverId,
+        pickupAddress: load.pickupAddress || '',
+        deliveryAddress: load.deliveryAddress || '',
+        fareOffer: load.fareOffer || 0,
+        status: 'in_transit',
+      };
+      const created = await firebaseShipmentsService.createShipment(shipmentData);
+      if (!created?.success) {
+        throw new Error(created?.error || 'Failed to create shipment');
+      }
+
+      const shipmentId = created.data.id;
+
+      // Update the load to in_transit and set shipmentId
+      const upd = await firebaseLoadsService.updateLoad(loadId, { status: 'in_transit', shipmentId });
+      if (!upd?.success) {
+        throw new Error(upd?.error || 'Failed to update load');
+      }
+
+      Alert.alert('Driver accepted', 'Trip has started.');
+      // Optionally navigate back or to a tracking screen; the driver will transition via realtime.
+      navigation.navigate('Dashboard');
+    } catch (e) {
+      console.error('Accept driver error:', e);
+      Alert.alert('Error', e.message || 'Could not accept driver. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleCloseAlert = () => {
@@ -79,6 +132,17 @@ const DriverFoundScreen = ({ navigation }) => {
       setIsTransitioning(false);
     };
   }, []);
+
+  // Subscribe to load to detect completion and navigate
+  useEffect(() => {
+    if (!loadId) return;
+    const unsubscribe = firebaseLoadsService.subscribeToLoad(loadId, (updated) => {
+      if (updated && updated.status === 'completed') {
+        navigation.navigate('DeliveryComplete');
+      }
+    });
+    return () => { unsubscribe && unsubscribe(); };
+  }, [loadId]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -128,13 +192,22 @@ const DriverFoundScreen = ({ navigation }) => {
           </View>
         </View>
         
-        <TouchableOpacity 
-          style={[styles.cancelButton, isTransitioning && styles.disabledButton]}
-          onPress={handleCancelRequest}
-          disabled={isTransitioning}
-        >
-          <Text style={styles.cancelButtonText}>CANCEL REQUEST</Text>
-        </TouchableOpacity>
+        <View style={{ gap: 10 }}>
+          <TouchableOpacity 
+            style={[styles.primaryButton, processing && styles.disabledButton]}
+            onPress={handleAcceptDriver}
+            disabled={processing}
+          >
+            <Text style={styles.primaryButtonText}>{processing ? 'PROCESSING...' : 'ACCEPT DRIVER'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.cancelButton, isTransitioning && styles.disabledButton]}
+            onPress={handleCancelRequest}
+            disabled={isTransitioning}
+          >
+            <Text style={styles.cancelButtonText}>CANCEL REQUEST</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Delivery Alert Modal */}

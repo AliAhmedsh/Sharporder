@@ -69,6 +69,11 @@ const OnboardingScreen = ({ navigation }) => {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(_, index) => index.toString()}
+        getItemLayout={(data, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
         onMomentumScrollEnd={ev => {
           const index = Math.round(ev.nativeEvent.contentOffset.x / width);
           setCurrentOnboardingStep(index);

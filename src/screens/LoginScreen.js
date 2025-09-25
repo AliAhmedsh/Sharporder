@@ -20,7 +20,9 @@ import {useAuth} from '../context/AuthContext';
 
 const LoginScreen = ({navigation}) => {
   const {formData, setFormData} = useAppContext();
-  const {signIn, resetPassword, loading} = useAuth();
+  const {signIn, resetPassword} = useAuth();
+
+  const [submitting, setSubmitting] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -56,6 +58,7 @@ const LoginScreen = ({navigation}) => {
     try {
       setLoginError('');
       console.log('Attempting to log in...');
+      setSubmitting(true);
 
       const result = await signIn(email, formData.password);
       console.log('Sign in result:', result);
@@ -98,6 +101,8 @@ const LoginScreen = ({navigation}) => {
 
       setLoginError(errorMessage);
       Alert.alert('Error', errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -184,7 +189,7 @@ const LoginScreen = ({navigation}) => {
               keyboardType="email-address"
               autoCapitalize="none"
               placeholderTextColor="#C0C0C0"
-              editable={!loading}
+              editable={!submitting}
             />
             {renderInputError('email')}
           </View>
@@ -208,12 +213,12 @@ const LoginScreen = ({navigation}) => {
                 }}
                 secureTextEntry={!showPassword}
                 placeholderTextColor="#C0C0C0"
-                editable={!loading}
+                editable={!submitting}
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
-                disabled={loading}>
+                disabled={submitting}>
                 <Image source={eye} style={styles.eyeIcon} />
               </TouchableOpacity>
             </View>
@@ -221,10 +226,12 @@ const LoginScreen = ({navigation}) => {
           </View>
 
           <View style={styles.loginLinks}>
-            <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+            <TouchableOpacity
+              onPress={handleForgotPassword}
+              disabled={submitting}>
               <Text style={styles.signUpText}>Forgot password?</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSignUp} disabled={loading}>
+            <TouchableOpacity onPress={handleSignUp} disabled={submitting}>
               <Text style={styles.linkText}>
                 Don't have an account?{' '}
                 <Text style={styles.signUpText}>Sign up</Text>
@@ -233,10 +240,13 @@ const LoginScreen = ({navigation}) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.fullWidthButton, loading && styles.buttonDisabled]}
+            style={[
+              styles.fullWidthButton,
+              submitting && styles.buttonDisabled,
+            ]}
             onPress={handleLogin}
-            disabled={loading}>
-            {loading ? (
+            disabled={submitting}>
+            {submitting ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <Text style={styles.fullWidthButtonText}>LOGIN</Text>

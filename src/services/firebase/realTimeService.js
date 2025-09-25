@@ -18,20 +18,31 @@ export const realTimeService = {
   subscribeToUserLoads: (userId, callback) => {
     const q = query(
       collection(db, 'loads'),
-      where('shipperId', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('shipperId', '==', userId)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const loads = [];
-      querySnapshot.forEach((doc) => {
-        loads.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+      try {
+        if (!querySnapshot || typeof querySnapshot.forEach !== 'function') {
+          callback([]);
+          return;
+        }
+        const loads = [];
+        querySnapshot.forEach((doc) => {
+          loads.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          });
         });
-      });
-      callback(loads);
+        callback(loads);
+      } catch (e) {
+        console.error('subscribeToUserLoads snapshot error:', e);
+        callback([]);
+      }
+    }, (error) => {
+      console.error('subscribeToUserLoads listener error:', error);
+      callback([]);
     });
 
     return unsubscribe;
@@ -46,15 +57,27 @@ export const realTimeService = {
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const shipments = [];
-      querySnapshot.forEach((doc) => {
-        shipments.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+      try {
+        if (!querySnapshot || typeof querySnapshot.forEach !== 'function') {
+          callback([]);
+          return;
+        }
+        const shipments = [];
+        querySnapshot.forEach((doc) => {
+          shipments.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          });
         });
-      });
-      callback(shipments);
+        callback(shipments);
+      } catch (e) {
+        console.error('subscribeToUserShipments snapshot error:', e);
+        callback([]);
+      }
+    }, (error) => {
+      console.error('subscribeToUserShipments listener error:', error);
+      callback([]);
     });
 
     return unsubscribe;
@@ -62,10 +85,10 @@ export const realTimeService = {
 
   // Subscribe to available loads for drivers
   subscribeToAvailableLoads: (callback, filters = {}) => {
+    // Note: no orderBy here to avoid composite index requirement
     let q = query(
       collection(db, 'loads'),
-      where('status', '==', 'available'),
-      orderBy('createdAt', 'desc')
+      where('status', 'in', ['available', 'applied']) // Include both available and applied loads
     );
 
     if (filters.truckType) {
@@ -73,15 +96,27 @@ export const realTimeService = {
     }
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const loads = [];
-      querySnapshot.forEach((doc) => {
-        loads.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+      try {
+        if (!querySnapshot || typeof querySnapshot.forEach !== 'function') {
+          callback([]);
+          return;
+        }
+        const loads = [];
+        querySnapshot.forEach((doc) => {
+          loads.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          });
         });
-      });
-      callback(loads);
+        callback(loads);
+      } catch (e) {
+        console.error('subscribeToAvailableLoads snapshot error:', e);
+        callback([]);
+      }
+    }, (error) => {
+      console.error('subscribeToAvailableLoads listener error:', error);
+      callback([]);
     });
 
     return unsubscribe;
@@ -97,15 +132,27 @@ export const realTimeService = {
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const shipments = [];
-      querySnapshot.forEach((doc) => {
-        shipments.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+      try {
+        if (!querySnapshot || typeof querySnapshot.forEach !== 'function') {
+          callback([]);
+          return;
+        }
+        const shipments = [];
+        querySnapshot.forEach((doc) => {
+          shipments.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          });
         });
-      });
-      callback(shipments);
+        callback(shipments);
+      } catch (e) {
+        console.error('subscribeToDriverShipments snapshot error:', e);
+        callback([]);
+      }
+    }, (error) => {
+      console.error('subscribeToDriverShipments listener error:', error);
+      callback([]);
     });
 
     return unsubscribe;

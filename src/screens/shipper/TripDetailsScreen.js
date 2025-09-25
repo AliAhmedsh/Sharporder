@@ -9,15 +9,54 @@ import {
   SafeAreaView,
   StatusBar,
   Modal,
+  Alert,
 } from 'react-native';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { firebaseLoadsService } from '../../services/firebase';
 
 const TripDetailsScreen = ({ visible, onClose = () => {}, navigation }) => {
   const { formData, setFormData } = useAppContext();
+  const { user } = useAuth();
 
-  const handleSearchDriver = () => {
-    onClose();
-    navigation.navigate('DriverSearch');
+  const handleSearchDriver = async () => {
+    try {
+      if (!user || !user.uid) {
+        Alert.alert('Not signed in', 'Please sign in to create a delivery request.');
+        return;
+      }
+
+      // Prepare load payload
+      const loadData = {
+        shipperId: user.uid,
+        pickupAddress: formData.pickupAddress || '',
+        deliveryAddress: formData.deliveryAddress || '',
+        truckType: formData.truckType || '',
+        loadDescription: formData.loadDescription || '',
+        recipientName: formData.recipientName || '',
+        recipientNumber: formData.recipientNumber || '',
+        fareOffer: formData.fareOffer ? parseInt(formData.fareOffer, 10) : 0,
+      };
+
+      const result = await firebaseLoadsService.createLoad(loadData);
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to create load');
+      }
+
+      const created = result.data; // { id, ...loadData }
+
+      // Close modal and navigate to driver search, passing the new loadId
+      onClose();
+      if (navigation && navigation.navigate) {
+        navigation.navigate('DriverSearch', { loadId: created.id });
+      }
+
+      Alert.alert('Request created', 'Your delivery request has been posted to the load board.');
+    } catch (err) {
+      console.error('Error creating load:', err);
+      Alert.alert('Error', err.message || 'Could not create delivery request. Please try again.');
+    }
   };
 
   const handleBackdropPress = () => {

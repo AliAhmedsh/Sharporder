@@ -18,6 +18,9 @@ import {
 } from 'react-native';
 
 import MapView from 'react-native-maps';
+import DeliveryDetailsScreen from './DeliveryDetailsScreen';
+import TripDetailsScreen from './TripDetailsScreen';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import hamburger from '../../assets/icons/hamburger.png';
 import headset from '../../assets/icons/headset.png';
 import help from '../../assets/icons/help.png';
@@ -26,7 +29,6 @@ import logout from '../../assets/icons/logout.png';
 import payments from '../../assets/icons/payments.png';
 import search from '../../assets/icons/search.png';
 import shipments from '../../assets/icons/shipments.png';
-import DeliveryDetailsScreen from './DeliveryDetailsScreen';
 
 import {useAuth} from '../../context/AuthContext';
 
@@ -152,7 +154,8 @@ const DashboardScreen = ({navigation}) => {
   const handleSuggestionPress = item => {
     setQuery(item);
     searchLocation();
-    navigation?.navigate && navigation.navigate('DeliveryDetails');
+    // Open delivery details step instead of navigating to a route
+    setStep(1);
   };
 
   const closeBookingSheet = () => {
@@ -319,8 +322,6 @@ const DashboardScreen = ({navigation}) => {
                 onFocusSearch={openBookingSheet}
                 onSuggestionPress={handleSuggestionPress}
               />
-            ) : step === 1 ? (
-              <DeliveryDetailsScreen />
             ) : null}
           </ScrollView>
         </Animated.View>
@@ -445,6 +446,22 @@ const DashboardScreen = ({navigation}) => {
             <Image source={hamburger} style={styles.hamburgerIcon} />
           </View>
         </TouchableOpacity>
+      )}
+
+      {/* Step Modals */}
+      {step === 1 && (
+        <DeliveryDetailsScreen
+          visible={true}
+          onClose={() => setStep(0)}
+          onContinue={() => setStep(2)}
+        />
+      )}
+      {step === 2 && (
+        <TripDetailsScreen
+          visible={true}
+          onClose={() => setStep(1)}
+          navigation={navigation}
+        />
       )}
     </SafeAreaView>
   );

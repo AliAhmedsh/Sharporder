@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "739780402557",
-    "project_id": "sharp-order",
-    "storage_bucket": "sharp-order.firebasestorage.app"
+    "project_number": "53281334067",
+    "project_id": "sharp-order-21054",
+    "storage_bucket": "sharp-order-21054.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:739780402557:android:feecd0f9d2a84e93320014",
+        "mobilesdk_app_id": "1:53281334067:android:3a7ff10d7ce5965deed446",
         "android_client_info": {
-          "package_name": "com.weblahChatApp"
+          "package_name": "com.sharporder"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBJqdr_vjMvS-LgdcwNhzhRcLgcFM-LOuo"
+          "current_key": "AIzaSyCr3k7sLVQkRDnNedCznPNt5FPjk2xfkMo"
         }
       ],
       "services": {
