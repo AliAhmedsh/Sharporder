@@ -173,7 +173,7 @@ const DashboardScreen = ({navigation}) => {
     longitudeDelta: 0.05,
   });
 
-  const [step, setStep] = useState(2);
+  const [step, setStep] = useState(0);
 
   const [marker, setMarker] = useState({
     latitude: 6.5244,
@@ -465,6 +465,7 @@ const DashboardScreen = ({navigation}) => {
           formData={formData}
           visible={true}
           onClose={() => setStep(1)}
+          setFormData={setFormData}
           navigation={navigation}
         />
       )}

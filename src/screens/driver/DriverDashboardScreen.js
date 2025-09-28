@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -28,8 +28,8 @@ import loadboard from '../../assets/icons/loadboard.png';
 import previous from '../../assets/icons/previous.png';
 import next from '../../assets/icons/next.png';
 
-import { useAuth } from '../../context/AuthContext';
-import { realTimeService, firebaseLoadsService } from '../../services/firebase';
+import {useAuth} from '../../context/AuthContext';
+import {realTimeService, firebaseLoadsService} from '../../services/firebase';
 import auth from '@react-native-firebase/auth';
 
 const DriverStats = () => {
@@ -43,7 +43,7 @@ const DriverStats = () => {
       </View>
       <Text style={styles.statsValue}>₦0</Text>
       <View style={styles.statsDivider} />
-      
+
       <View style={styles.statsHeader}>
         <Text style={styles.statsTitle}>Today's loads</Text>
         <TouchableOpacity>
@@ -52,7 +52,7 @@ const DriverStats = () => {
       </View>
       <Text style={styles.statsValue}>20</Text>
       <View style={styles.statsDivider} />
-      
+
       <View style={styles.statsHeader}>
         <Text style={styles.statsTitle}>Current rating</Text>
         <TouchableOpacity>
@@ -64,7 +64,7 @@ const DriverStats = () => {
   );
 };
 
-const LoadCard = ({ load }) => {
+const LoadCard = ({load}) => {
   return (
     <View style={styles.loadCard}>
       <View style={styles.loadHeader}>
@@ -73,7 +73,7 @@ const LoadCard = ({ load }) => {
           <Text style={styles.loadRouteText}>Lagos → Abuja</Text>
         </View>
       </View>
-      
+
       <View style={styles.loadDetails}>
         <View style={styles.loadDetailItem}>
           <Text style={styles.loadDetailIcon}>🕒</Text>
@@ -88,22 +88,24 @@ const LoadCard = ({ load }) => {
           <Text style={styles.loadDetailText}>Truck</Text>
         </View>
       </View>
-      
+
       <View style={styles.customerInfo}>
-        <Image 
-          source={{ uri: 'https://via.placeholder.com/40' }} 
-          style={styles.customerAvatar} 
+        <Image
+          source={{uri: 'https://via.placeholder.com/40'}}
+          style={styles.customerAvatar}
         />
         <View style={styles.customerDetails}>
           <Text style={styles.customerName}>Chukwuebube Osinachi</Text>
           <View style={styles.customerRating}>
             <Text style={styles.customerStar}>⭐</Text>
             <Text style={styles.customerRatingText}>4.8</Text>
-            <Text style={styles.customerDeliveries}>120 successful deliveries</Text>
+            <Text style={styles.customerDeliveries}>
+              120 successful deliveries
+            </Text>
           </View>
         </View>
       </View>
-      
+
       <View style={styles.loadFooter}>
         <Text style={styles.loadPrice}>₦120,000 - ₦150,000</Text>
         <TouchableOpacity style={styles.viewDetailsButton}>
@@ -114,38 +116,58 @@ const LoadCard = ({ load }) => {
   );
 };
 
-const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPress }) => {
+const OnlineLoadCard = ({
+  load,
+  onAccept,
+  onDeny,
+  showActions = false,
+  onArrowPress,
+  onCancel,
+}) => {
   const pickup = load?.pickupAddress || 'Pickup address';
   const delivery = load?.deliveryAddress || 'Delivery address';
-  const fareOffer = typeof load?.fareOffer === 'number' 
-    ? `NGN ${ (load.fareOffer.toLocaleString && load.fareOffer.toLocaleString()) || load.fareOffer }`
-    : (load?.fareOffer ? `NGN ${load.fareOffer}` : 'NGN -');
+  const fareOffer =
+    typeof load?.fareOffer === 'number'
+      ? `NGN ${
+          (load.fareOffer.toLocaleString && load.fareOffer.toLocaleString()) ||
+          load.fareOffer
+        }`
+      : load?.fareOffer
+      ? `NGN ${load.fareOffer}`
+      : 'NGN -';
   const truckType = load?.truckType || 'Truck';
   const shipperName = load?.shipperName || 'Shipper';
-  const timeText = load?.createdAt 
-    ? (load.createdAt.toLocaleString ? load.createdAt.toLocaleString() : new Date(load.createdAt).toLocaleString())
+  const timeText = load?.createdAt
+    ? load.createdAt.toLocaleString
+      ? load.createdAt.toLocaleString()
+      : new Date(load.createdAt).toLocaleString()
     : 'Just now';
+
+  const applied = load?.bidders?.includes(auth().currentUser?.uid);
+
   return (
     <View style={styles.onlineLoadCard}>
       <View style={styles.onlineLoadContent}>
         <View style={styles.onlineLoadHeader}>
-          <Image 
-            source={{ uri: 'https://via.placeholder.com/40' }} 
-            style={styles.onlineCustomerAvatar} 
+          <Image
+            source={{uri: 'https://via.placeholder.com/40'}}
+            style={styles.onlineCustomerAvatar}
           />
           <View style={styles.onlineLoadInfo}>
             <View style={styles.onlineNameRow}>
               <Text style={styles.onlineCustomerName}>{shipperName}</Text>
               <View style={styles.onlineRating}>
                 <Text style={styles.onlineStar}>⭐</Text>
-                <Text style={styles.onlineRatingText}>{(load?.shipperRating || 4.5).toString()}</Text>
+                <Text style={styles.onlineRatingText}>
+                  {(load?.shipperRating || 4.5).toString()}
+                </Text>
               </View>
             </View>
             <Text style={styles.onlineTime}>{timeText}</Text>
             <Text style={styles.onlineCapacity}>{truckType}</Text>
           </View>
         </View>
-        
+
         <View style={styles.onlineLocations}>
           <View style={styles.onlineLocationItem}>
             <View style={styles.greenDot} />
@@ -156,22 +178,34 @@ const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPr
             <Text style={styles.onlineLocationText}>{delivery}</Text>
           </View>
         </View>
-        
+
         <Text style={styles.onlinePrice}>{fareOffer}</Text>
       </View>
-      
+
       {showActions ? (
-        <View style={styles.onlineActions}>
-          <TouchableOpacity style={styles.acceptButton} onPress={onAccept}>
-            <Text style={styles.acceptText}>ACCEPT</Text>
-          </TouchableOpacity>
-          <View style={styles.actionDivider} />
-          <TouchableOpacity style={styles.denyButton} onPress={onDeny}>
-            <Text style={styles.denyText}>DENY</Text>
-          </TouchableOpacity>
+        <View style={{...styles.onlineActions, width: applied ? 75 : 150}}>
+          {applied ? (
+            <TouchableOpacity
+              style={styles.cancel}
+              onPress={() => onCancel(load.id)}>
+              <Text style={styles.acceptText}>Cancel</Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.acceptButton} onPress={onAccept}>
+                <Text style={styles.acceptText}>Apply</Text>
+              </TouchableOpacity>
+              <View style={styles.actionDivider} />
+              <TouchableOpacity style={styles.denyButton} onPress={onDeny}>
+                <Text style={styles.denyText}>Remove</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       ) : (
-        <TouchableOpacity style={styles.onlineArrowButton} onPress={onArrowPress}>
+        <TouchableOpacity
+          style={styles.onlineArrowButton}
+          onPress={onArrowPress}>
           <Text style={styles.onlineArrow}>›</Text>
         </TouchableOpacity>
       )}
@@ -179,10 +213,10 @@ const OnlineLoadCard = ({ load, onAccept, onDeny, showActions = false, onArrowPr
   );
 };
 
-const { height, width: screenWidth } = Dimensions.get('window');
+const {height, width: screenWidth} = Dimensions.get('window');
 
-const DriverDashboardScreen = ({ navigation }) => {
-  const { signOut, user } = useAuth();
+const DriverDashboardScreen = ({navigation}) => {
+  const {signOut, user} = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -199,7 +233,9 @@ const DriverDashboardScreen = ({ navigation }) => {
 
   const bottomSheetHeight = Math.round(height * 0.95);
   const PEEK_HEIGHT = 350;
-  const bottomSheetTranslateY = useRef(new Animated.Value(bottomSheetHeight - PEEK_HEIGHT)).current;
+  const bottomSheetTranslateY = useRef(
+    new Animated.Value(bottomSheetHeight - PEEK_HEIGHT),
+  ).current;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
@@ -220,7 +256,7 @@ const DriverDashboardScreen = ({ navigation }) => {
     let unsubscribe = null;
     if (isOnline) {
       // Note: truckType filter temporarily disabled to diagnose disappearing cards
-      unsubscribe = realTimeService.subscribeToAvailableLoads((loads) => {
+      unsubscribe = realTimeService.subscribeToAvailableLoads(loads => {
         const count = Array.isArray(loads) ? loads.length : 0;
         console.log('Realtime available loads count:', count);
         if (count > 0) {
@@ -285,7 +321,7 @@ const DriverDashboardScreen = ({ navigation }) => {
 
   const openBottomSheet = () => {
     if (isSheetOpen || isOnline) return;
-    
+
     Animated.timing(bottomSheetTranslateY, {
       toValue: 0,
       duration: 250,
@@ -314,7 +350,7 @@ const DriverDashboardScreen = ({ navigation }) => {
 
   const openSidePanel = () => {
     setShowSidePanel(true);
-    
+
     Animated.parallel([
       Animated.timing(drawerTranslateX, {
         toValue: 0,
@@ -326,13 +362,13 @@ const DriverDashboardScreen = ({ navigation }) => {
         toValue: 1,
         duration: 220,
         useNativeDriver: true,
-      })
+      }),
     ]).start();
   };
 
   const closeSidePanel = () => {
     overlayOpacity.setValue(0);
-    
+
     Animated.timing(drawerTranslateX, {
       toValue: -DRAWER_WIDTH,
       duration: 200,
@@ -347,7 +383,7 @@ const DriverDashboardScreen = ({ navigation }) => {
     setShowAcceptModal(false);
   };
 
-  const handleAcceptLoad = async (load) => {
+  const handleAcceptLoad = async load => {
     try {
       if (!load?.id) return;
       const driverId = user?.uid || auth().currentUser?.uid;
@@ -364,42 +400,73 @@ const DriverDashboardScreen = ({ navigation }) => {
       console.log('Fare offer:', fareOffer);
 
       // Submit a bid using the new bidding system
-      const res = await firebaseLoadsService.submitBid(load.id, driverId, fareOffer);
+      const res = await firebaseLoadsService.submitBid(
+        load.id,
+        driverId,
+        fareOffer,
+      );
       if (!res?.success) {
         throw new Error(res?.error || 'Failed to submit bid');
       }
 
       setActiveLoadIndex(null);
       setSelectedLoad(load);
-      Alert.alert('Bid Submitted', 'Your bid has been submitted. Waiting for shipper response.');
+      Alert.alert(
+        'Bid Submitted',
+        'Your bid has been submitted. Waiting for shipper response.',
+      );
 
       // Subscribe to this load for status updates; navigate when accepted
-      const unsubscribe = firebaseLoadsService.subscribeToLoad(load.id, (updated) => {
-        console.log('Load updated:', updated);
-        if (updated && updated.status === 'accepted') {
-          unsubscribe && unsubscribe();
-          navigation.navigate('DriverOnTheWay', {
-            price: (typeof updated.fareOffer === 'number' ? `NGN ${updated.fareOffer}` : (updated.fareOffer || 'NGN -')),
-            load: updated,
-            shipmentId: updated.shipmentId || null,
-          });
-        }
-      });
+      const unsubscribe = firebaseLoadsService.subscribeToLoad(
+        load.id,
+        updated => {
+          console.log('Load updated:', updated);
+          if (updated && updated.status === 'accepted') {
+            unsubscribe && unsubscribe();
+            navigation.navigate('DriverOnTheWay', {
+              price:
+                typeof updated.fareOffer === 'number'
+                  ? `NGN ${updated.fareOffer}`
+                  : updated.fareOffer || 'NGN -',
+              load: updated,
+              shipmentId: updated.shipmentId || null,
+            });
+          }
+        },
+      );
     } catch (e) {
       console.error('Submit bid error:', e);
-      Alert.alert('Error', e.message || 'Could not submit bid. Please try again.');
+      Alert.alert(
+        'Error',
+        e.message || 'Could not submit bid. Please try again.',
+      );
     }
   };
 
-  const handleDenyLoad = (loadId) => {
-    console.log('Denied load:', loadId);
-    setActiveLoadIndex(null); // Hide actions after deny
-    // Handle deny logic here
+  const handleDenyLoad = async loadId => {
+    if (!loadId) return;
+
+    const driverId = user?.uid || auth().currentUser?.uid;
+    if (!driverId) {
+      Alert.alert('Not signed in', 'Please sign in to accept a load.');
+      return;
+    }
+
+    const res = await firebaseLoadsService.denyLoad(loadId, driverId);
+
+    if (!res?.success) {
+      throw new Error(res?.error || 'Failed to deny load');
+    }
   };
 
   const handleArrowPress = (loadId, index) => {
     // Toggle the actions for this specific load
     setActiveLoadIndex(activeLoadIndex === index ? null : index);
+  };
+
+  const handleCancel = async loadId => {
+    const bidId = await firebaseLoadsService.cancelBid(loadId, user._user.uid);
+    firebaseLoadsService.rejectBid(bidId, loadId, user._user.uid);
   };
 
   const sampleLoad = {
@@ -411,7 +478,7 @@ const DriverDashboardScreen = ({ navigation }) => {
     customer: 'Chukwuebube Osinachi',
     rating: 4.8,
     deliveries: 120,
-    priceRange: '₦120,000 - ₦150,000'
+    priceRange: '₦120,000 - ₦150,000',
   };
 
   return (
@@ -423,73 +490,82 @@ const DriverDashboardScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[
             styles.goOnlineButton,
-            { backgroundColor: isOnline ? '#FF4444' : '#00C896' }
+            {backgroundColor: isOnline ? '#FF4444' : '#00C896'},
           ]}
-          onPress={toggleOnlineStatus}
-        >
+          onPress={toggleOnlineStatus}>
           <Text style={styles.goOnlineText}>
-            {isOnline ? 'GO OFFLINE AND TAKE A BREAK' : 'GO ONLINE AND START EARNING'}
+            {isOnline
+              ? 'GO OFFLINE AND TAKE A BREAK'
+              : 'GO ONLINE AND START EARNING'}
           </Text>
-          <Image source={isOnline ? previous : next} style={styles.goOnlineArrow} />
+          <Image
+            source={isOnline ? previous : next}
+            style={styles.goOnlineArrow}
+          />
         </TouchableOpacity>
       </View>
 
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
-          style={{ width: '100%', flex: 1 }}
+          style={{width: '100%', flex: 1}}
           initialRegion={region}
           showsUserLocation={true}
           showsMyLocationButton={true}
         />
-        
+
         {/* Online Load Cards - Show when driver is online */}
         {isOnline && !showAcceptModal && (
-          <ScrollView 
+          <ScrollView
             style={styles.onlineLoadsContainer}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.onlineLoadsContent}
-          >
-            {availableLoads.map((load, index) => (
-              <OnlineLoadCard
-                key={load.id}
-                load={load}
-                showActions={index === activeLoadIndex}
-                onAccept={() => handleAcceptLoad(load)}
-                onDeny={() => handleDenyLoad(load.id)}
-                onArrowPress={() => handleArrowPress(load.id, index)}
-              />
-            ))}
+            contentContainerStyle={styles.onlineLoadsContent}>
+            {availableLoads
+              .filter(load => {
+                return !(
+                  load.nonInterestedDrivers &&
+                  load.nonInterestedDrivers.includes(user._user.uid)
+                );
+              })
+              .map((load, index) => (
+                <OnlineLoadCard
+                  key={load.id}
+                  load={load}
+                  showActions={index === activeLoadIndex}
+                  onAccept={() => handleAcceptLoad(load)}
+                  onDeny={() => handleDenyLoad(load.id)}
+                  onArrowPress={() => handleArrowPress(load.id, index)}
+                  onCancel={handleCancel}
+                />
+              ))}
           </ScrollView>
         )}
-        
+
         {/* Bottom Sheet - Hidden when online */}
         {!isOnline && isSheetOpen && (
           <TouchableOpacity
             activeOpacity={1}
             onPress={closeBottomSheet}
-            style={[styles.sheetOverlay, { bottom: bottomSheetHeight }]}
+            style={[styles.sheetOverlay, {bottom: bottomSheetHeight}]}
           />
         )}
-        
+
         <Animated.View
           style={[
             styles.bottomSheet,
-            { 
+            {
               height: bottomSheetHeight,
-              transform: [{ translateY: bottomSheetTranslateY }] 
+              transform: [{translateY: bottomSheetTranslateY}],
             },
           ]}
-          pointerEvents={isOnline ? 'none' : 'auto'}
-        >
-          <TouchableOpacity 
+          pointerEvents={isOnline ? 'none' : 'auto'}>
+          <TouchableOpacity
             style={styles.sheetHandle}
             onPress={isSheetOpen ? closeBottomSheet : openBottomSheet}
           />
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1, padding: 16 }}
-            style={styles.sheetContent}
-          >
+            contentContainerStyle={{flexGrow: 1, padding: 16}}
+            style={styles.sheetContent}>
             <DriverStats />
             <View style={styles.availableLoadsSection}>
               <Text style={styles.availableLoadsTitle}>Available Loads</Text>
@@ -503,17 +579,16 @@ const DriverDashboardScreen = ({ navigation }) => {
       {showSidePanel && (
         <Animated.View
           style={[
-            styles.overlay, 
-            { 
+            styles.overlay,
+            {
               left: DRAWER_WIDTH,
-              opacity: overlayOpacity 
-            }
-          ]}
-        >
+              opacity: overlayOpacity,
+            },
+          ]}>
           <TouchableOpacity
             activeOpacity={1}
             onPress={closeSidePanel}
-            style={{ flex: 1 }}
+            style={{flex: 1}}
           />
         </Animated.View>
       )}
@@ -525,17 +600,18 @@ const DriverDashboardScreen = ({ navigation }) => {
           styles.drawerContainer,
           {
             width: DRAWER_WIDTH,
-            transform: [{ translateX: drawerTranslateX }],
+            transform: [{translateX: drawerTranslateX}],
           },
-        ]}
-      >
-        <ScrollView contentContainerStyle={{ paddingTop: 60 }}>
+        ]}>
+        <ScrollView contentContainerStyle={{paddingTop: 60}}>
           <View style={styles.drawerProfile}>
             <View style={styles.drawerAvatar}>
               <Text style={styles.drawerAvatarText}>OO</Text>
             </View>
             <View style={styles.drawerInfo}>
-              <Text style={styles.drawerBusinessName}>Onyinyechukwu Balogun</Text>
+              <Text style={styles.drawerBusinessName}>
+                Onyinyechukwu Balogun
+              </Text>
               <View style={styles.drawerRating}>
                 <Text style={styles.drawerStar}>⭐</Text>
                 <Text style={styles.drawerRatingText}>4.89</Text>
@@ -544,61 +620,68 @@ const DriverDashboardScreen = ({ navigation }) => {
           </View>
           <View style={styles.drawerMenu}>
             {[
-              { 
-                id: 'loadboard', 
-                title: 'Load board', 
+              {
+                id: 'loadboard',
+                title: 'Load board',
                 icon: loadboard,
                 onPress: () => {
                   closeSidePanel();
                   navigation.navigate('DriverLoadBoard');
-                }
+                },
               },
-              { 
-                id: 'trips', 
-                title: 'My trips', 
+              {
+                id: 'trips',
+                title: 'My trips',
                 icon: trips,
                 onPress: () => {
                   closeSidePanel();
-                }
+                },
               },
-              { 
-                id: 'wallet', 
-                title: 'Wallet', 
+              {
+                id: 'wallet',
+                title: 'Wallet',
                 icon: wallet,
                 onPress: () => {
                   closeSidePanel();
-                }
+                },
               },
-              { 
-                id: 'support', 
-                title: 'Support', 
+              {
+                id: 'support',
+                title: 'Support',
                 icon: headset,
-                onPress: closeSidePanel
+                onPress: closeSidePanel,
               },
-              { 
-                id: 'about', 
-                title: 'About', 
+              {
+                id: 'about',
+                title: 'About',
                 icon: help,
-                onPress: closeSidePanel
+                onPress: closeSidePanel,
               },
-              { 
-                id: 'logout', 
-                title: 'Logout', 
+              {
+                id: 'logout',
+                title: 'Logout',
                 icon: logout,
                 onPress: handleLogout,
-                isLogout: true
+                isLogout: true,
               },
             ].map((item, idx, arr) => (
               <View key={item.id}>
                 <TouchableOpacity
                   style={styles.drawerItem}
                   activeOpacity={0.7}
-                  onPress={item.onPress}
-                >
+                  onPress={item.onPress}>
                   <Image style={styles.drawerItemIcon} source={item.icon} />
-                  <Text style={[styles.drawerItemText, item.isLogout && styles.logoutText]}>{item.title}</Text>
+                  <Text
+                    style={[
+                      styles.drawerItemText,
+                      item.isLogout && styles.logoutText,
+                    ]}>
+                    {item.title}
+                  </Text>
                 </TouchableOpacity>
-                {idx < arr.length - 1 && <View style={styles.drawerSeparator} />}
+                {idx < arr.length - 1 && (
+                  <View style={styles.drawerSeparator} />
+                )}
               </View>
             ))}
           </View>
@@ -611,8 +694,7 @@ const DriverDashboardScreen = ({ navigation }) => {
           style={styles.hamburgerButton}
           onPress={openSidePanel}
           activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
           <View style={styles.hamburgerButtonContainer}>
             <Image source={hamburger} style={styles.hamburgerIcon} />
           </View>
@@ -624,72 +706,90 @@ const DriverDashboardScreen = ({ navigation }) => {
         transparent
         animationType="slide"
         visible={showAcceptModal}
-        onRequestClose={() => setShowAcceptModal(false)}
-      >
+        onRequestClose={() => setShowAcceptModal(false)}>
         <TouchableOpacity
           activeOpacity={1}
           style={styles.modalOverlay}
-          onPress={() => setShowAcceptModal(false)}
-        >
+          onPress={() => setShowAcceptModal(false)}>
           <TouchableWithoutFeedback>
             <View style={styles.modalCard}>
               <View style={styles.modalHandle} />
               <View style={styles.modalHeaderRow}>
-                <Image 
-                  source={{ uri: 'https://via.placeholder.com/40' }} 
-                  style={styles.onlineCustomerAvatar} 
+                <Image
+                  source={{uri: 'https://via.placeholder.com/40'}}
+                  style={styles.onlineCustomerAvatar}
                 />
-                <View style={{ flex: 1 }}>
+                <View style={{flex: 1}}>
                   <View style={styles.onlineNameRow}>
-                    <Text style={styles.onlineCustomerName}>{selectedLoad?.customer || 'Kunle Alamu'}</Text>
+                    <Text style={styles.onlineCustomerName}>
+                      {selectedLoad?.customer || 'Kunle Alamu'}
+                    </Text>
                     <View style={styles.onlineRating}>
                       <Text style={styles.onlineStar}>⭐</Text>
-                      <Text style={styles.onlineRatingText}>{(selectedLoad?.rating || 4.5).toString()}</Text>
+                      <Text style={styles.onlineRatingText}>
+                        {(selectedLoad?.rating || 4.5).toString()}
+                      </Text>
                     </View>
                   </View>
-                  <Text style={styles.onlineTime}>{selectedLoad?.time || '10 mins away'}</Text>
-                  <Text style={styles.onlineCapacity}>Load capacity: 10-30 cubic yards</Text>
+                  <Text style={styles.onlineTime}>
+                    {selectedLoad?.time || '10 mins away'}
+                  </Text>
+                  <Text style={styles.onlineCapacity}>
+                    Load capacity: 10-30 cubic yards
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.onlineLocations}>
                 <View style={styles.onlineLocationItem}>
                   <View style={styles.greenDot} />
-                  <Text style={styles.onlineLocationText}>15 Bode Thomas Street, Surulere, Lagos</Text>
+                  <Text style={styles.onlineLocationText}>
+                    15 Bode Thomas Street, Surulere, Lagos
+                  </Text>
                 </View>
                 <View style={styles.onlineLocationItem}>
                   <View style={styles.purpleDot} />
-                  <Text style={styles.onlineLocationText}>35 Hakeem Dickson Street, Lekki Phase 1, Lagos</Text>
+                  <Text style={styles.onlineLocationText}>
+                    35 Hakeem Dickson Street, Lekki Phase 1, Lagos
+                  </Text>
                 </View>
               </View>
 
               <Text style={styles.modalPrice}>NGN 15,000</Text>
 
-              <TouchableOpacity 
-              style={styles.modalAcceptButton} 
-              onPress={() => {
-                setShowAcceptModal(false);
-                navigation.navigate('DriverOnTheWay', { price: 'NGN 15,000', load: selectedLoad });
-              }}
-            >
-              <Text style={styles.modalAcceptText}>ACCEPT NGN 15,000</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalAcceptButton}
+                onPress={() => {
+                  setShowAcceptModal(false);
+                  navigation.navigate('DriverOnTheWay', {
+                    price: 'NGN 15,000',
+                    load: selectedLoad,
+                  });
+                }}>
+                <Text style={styles.modalAcceptText}>ACCEPT NGN 15,000</Text>
+              </TouchableOpacity>
 
               <View style={styles.modalDivider} />
-              <Text style={styles.modalAltText}>Or select your preferred fare offer</Text>
+              <Text style={styles.modalAltText}>
+                Or select your preferred fare offer
+              </Text>
               <View style={styles.offerRow}>
-                {['NGN 15,500','NGN 16,000','NGN 17,000','NGN 18,000'].map(val => (
-                <TouchableOpacity 
-                  key={val} 
-                  style={styles.offerChip} 
-                  onPress={() => {
-                    setShowAcceptModal(false);
-                    navigation.navigate('DriverOnTheWay', { price: val, load: selectedLoad });
-                  }}
-                >
-                  <Text style={styles.offerChipText}>{val}</Text>
-                </TouchableOpacity>
-              ))}
+                {['NGN 15,500', 'NGN 16,000', 'NGN 17,000', 'NGN 18,000'].map(
+                  val => (
+                    <TouchableOpacity
+                      key={val}
+                      style={styles.offerChip}
+                      onPress={() => {
+                        setShowAcceptModal(false);
+                        navigation.navigate('DriverOnTheWay', {
+                          price: val,
+                          load: selectedLoad,
+                        });
+                      }}>
+                      <Text style={styles.offerChipText}>{val}</Text>
+                    </TouchableOpacity>
+                  ),
+                )}
               </View>
 
               <TouchableOpacity onPress={() => setShowAcceptModal(false)}>
@@ -699,15 +799,14 @@ const DriverDashboardScreen = ({ navigation }) => {
           </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
-
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#ffffff' 
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
   },
   headerContainer: {
     position: 'absolute',
@@ -729,7 +828,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
   },
   goOnlineText: {
     color: '#FFFFFF',
@@ -738,13 +837,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   goOnlineArrow: {
-   width: 20,
-   height: 20,
-   marginLeft: 10,
-   resizeMode: 'contain',
+    width: 20,
+    height: 20,
+    marginLeft: 10,
+    resizeMode: 'contain',
   },
-  mapContainer: { 
-    flex: 1 
+  mapContainer: {
+    flex: 1,
   },
   statsContainer: {
     backgroundColor: '#FFFFFF',
@@ -756,7 +855,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     marginTop: 10,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
   },
   statsHeader: {
     flexDirection: 'row',
@@ -920,7 +1019,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     overflow: 'hidden',
     marginBottom: 8,
     marginHorizontal: 2,
@@ -1062,6 +1161,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
   },
+  cancel: {
+    backgroundColor: '#FF4444',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
   denyText: {
     color: '#FFFFFF',
     fontSize: 14,
@@ -1086,7 +1192,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
   },
   hamburgerIcon: {
     width: 52,
@@ -1190,11 +1296,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
   },
   drawerProfile: {
-    flexDirection: 'row',        
-    alignItems: 'center',        
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
@@ -1280,7 +1386,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
+    shadowOffset: {width: 0, height: -2},
   },
   sheetOverlay: {
     ...StyleSheet.absoluteFillObject,

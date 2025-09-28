@@ -43,7 +43,7 @@ const TripDetailsScreen = ({
         loadDescription: formData.loadDescription || '',
         recipientName: formData.recipientName || '',
         recipientNumber: formData.recipientNumber || '',
-        fareOffer: formData.fareOffer ? parseInt(formData.fareOffer, 10) : 0,
+        fareOffer: parseInt(formData.fareOffer || 1000, 10),
       };
 
       const result = await firebaseLoadsService.createLoad(loadData);
