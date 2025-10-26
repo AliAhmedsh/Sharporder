@@ -14,7 +14,7 @@ import {Formik, useFormikContext} from 'formik';
 import * as Yup from 'yup';
 
 const validationSchema = Yup.object().shape({
-  pickupAddress: Yup.string().required('Pickup address is required'),
+  pickupAddress: Yup.string(),
   deliveryAddress: Yup.string().required('Delivery address is required'),
   truckType: Yup.string().required('Please select a truck type'),
   loadDescription: Yup.string().required('Load description is required'),
