@@ -15,6 +15,8 @@ import {
   Platform,
   Modal,
   Alert,
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 
 import MapView from 'react-native-maps';
@@ -95,7 +97,7 @@ const LoadCard = ({load}) => {
           style={styles.customerAvatar}
         />
         <View style={styles.customerDetails}>
-          <Text style={styles.customerName}>Chukwuebube Osinachi</Text>
+          <Text style={styles.customerName}>Chukwuebuke Osinachi</Text>
           <View style={styles.customerRating}>
             <Text style={styles.customerStar}>⭐</Text>
             <Text style={styles.customerRatingText}>4.8</Text>
@@ -123,6 +125,10 @@ const OnlineLoadCard = ({
   showActions = false,
   onArrowPress,
   onCancel,
+  bidAmount,
+  onBidAmountChange,
+  onSubmitCounter,
+  submittingBid,
 }) => {
   const pickup = load?.pickupAddress || 'Pickup address';
   const delivery = load?.deliveryAddress || 'Delivery address';
@@ -183,7 +189,7 @@ const OnlineLoadCard = ({
       </View>
 
       {showActions ? (
-        <View style={{...styles.onlineActions, width: applied ? 75 : 150}}>
+        <View style={{...styles.onlineActions, width: applied ? 75 : 220}}>
           {applied ? (
             <TouchableOpacity
               style={styles.cancel}
@@ -208,6 +214,30 @@ const OnlineLoadCard = ({
           onPress={onArrowPress}>
           <Text style={styles.onlineArrow}>›</Text>
         </TouchableOpacity>
+      )}
+      {showActions && !applied && (
+        <View style={styles.counterBidContainer}>
+          <Text style={styles.counterBidLabel}>Propose counter-offer</Text>
+          <View style={styles.counterBidRow}>
+            <TextInput
+              style={styles.counterBidInput}
+              value={bidAmount}
+              onChangeText={onBidAmountChange}
+              placeholder="Enter amount"
+              keyboardType="numeric"
+            />
+            <TouchableOpacity
+              style={[styles.counterBidButton, submittingBid && styles.buttonDisabled]}
+              onPress={onSubmitCounter}
+              disabled={submittingBid}>
+              {submittingBid ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.counterBidButtonText}>Submit</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -242,6 +272,8 @@ const DriverDashboardScreen = ({navigation}) => {
   const [activeLoadIndex, setActiveLoadIndex] = useState(null); // Track which load shows actions
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState(null);
+  const [bidAmount, setBidAmount] = useState('');
+  const [bidding, setBidding] = useState(false);
   const DRAWER_WIDTH = Math.round(screenWidth * 0.75);
   const drawerTranslateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -459,9 +491,70 @@ const DriverDashboardScreen = ({navigation}) => {
     }
   };
 
-  const handleArrowPress = (loadId, index) => {
-    // Toggle the actions for this specific load
+  const handleArrowPress = (load, index) => {
+    setSelectedLoad(load);
+    setBidAmount('');
     setActiveLoadIndex(activeLoadIndex === index ? null : index);
+  };
+
+  const handleSubmitCounterBid = async load => {
+    if (!load?.id) return;
+
+    const driverId = user?.uid || auth().currentUser?.uid;
+    if (!driverId) {
+      Alert.alert('Not signed in', 'Please sign in to submit a bid.');
+      return;
+    }
+
+    const parsedBid = parseFloat(bidAmount.replace(/[^0-9.]/g, ''));
+    if (!parsedBid || parsedBid <= 0) {
+      Alert.alert('Invalid amount', 'Enter a valid bid amount.');
+      return;
+    }
+
+    try {
+      setBidding(true);
+      const response = await firebaseLoadsService.submitBid(
+        load.id,
+        driverId,
+        parsedBid,
+      );
+
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to submit bid');
+      }
+
+      setActiveLoadIndex(null);
+      setBidAmount('');
+      setSelectedLoad(load);
+      Alert.alert(
+        'Bid Submitted',
+        'Your counter-offer has been sent to the shipper.',
+      );
+
+      const unsubscribe = firebaseLoadsService.subscribeToLoad(load.id, updated => {
+        console.log('Load updated:', updated);
+        if (updated && updated.status === 'accepted') {
+          unsubscribe && unsubscribe();
+          navigation.navigate('DriverOnTheWay', {
+            price:
+              typeof updated.fareOffer === 'number'
+                ? `NGN ${updated.fareOffer}`
+                : updated.fareOffer || 'NGN -',
+            load: updated,
+            shipmentId: updated.shipmentId || null,
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Submit counter bid error:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Could not submit counter bid. Please try again.',
+      );
+    } finally {
+      setBidding(false);
+    }
   };
 
   const handleCancel = async loadId => {
@@ -475,7 +568,7 @@ const DriverDashboardScreen = ({navigation}) => {
     time: '20:50am, 01/09/205',
     weight: '134 Kg',
     vehicle: 'Truck',
-    customer: 'Chukwuebube Osinachi',
+    customer: 'Chukwuebuke Osinachi',
     rating: 4.8,
     deliveries: 120,
     priceRange: '₦120,000 - ₦150,000',
@@ -534,8 +627,12 @@ const DriverDashboardScreen = ({navigation}) => {
                   showActions={index === activeLoadIndex}
                   onAccept={() => handleAcceptLoad(load)}
                   onDeny={() => handleDenyLoad(load.id)}
-                  onArrowPress={() => handleArrowPress(load.id, index)}
+                  onArrowPress={() => handleArrowPress(load, index)}
                   onCancel={handleCancel}
+                  bidAmount={index === activeLoadIndex ? bidAmount : ''}
+                  onBidAmountChange={setBidAmount}
+                  onSubmitCounter={() => handleSubmitCounterBid(load)}
+                  submittingBid={bidding}
                 />
               ))}
           </ScrollView>
@@ -1124,9 +1221,48 @@ const styles = StyleSheet.create({
     borderLeftColor: '#EEEEEE',
   },
   onlineArrow: {
-    fontSize: 20,
-    color: '#666666',
-    fontWeight: 'bold',
+    fontSize: 24,
+    color: '#007AFF',
+  },
+  counterBidContainer: {
+    marginTop: 12,
+    backgroundColor: '#F5F5F7',
+    borderRadius: 12,
+    padding: 12,
+  },
+  counterBidLabel: {
+    fontSize: 14,
+    color: '#1C1C1E',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  counterBidRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  counterBidInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#D1D1D6',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+    fontSize: 16,
+    color: '#1C1C1E',
+  },
+  counterBidButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterBidButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   onlineActions: {
     position: 'absolute',

@@ -575,6 +575,18 @@ const DriverSignupScreen = ({navigation}) => {
     </Modal>
   );
 
+  const formatTruckTypeLabel = type => {
+    if (!type) {
+      return '';
+    }
+
+    const name = type.name ?? 'Truck';
+    const tyresValue = type.tyres ?? 'N/A';
+    const capacityValue = type.capacity ?? 'N/A';
+
+    return `${name} • No. of tyres: ${tyresValue} • Capacity: ${capacityValue}`;
+  };
+
   const renderTruckModal = () => (
     <Modal visible={showModal} transparent={true} animationType="slide">
       <View style={styles.modalOverlay}>
@@ -582,35 +594,25 @@ const DriverSignupScreen = ({navigation}) => {
           <View style={styles.modalHandle} />
           <Text style={styles.modalTitle}>Select your Truck Type</Text>
           {truckTypes.map((type, index) => (
-            <TouchableOpacity
-              style={{alignItems: 'left', width: '100%'}}
-              key={index}
-              onPress={() => {
-                handleInputChange(
-                  'truckType',
-                  `${type.tyres} Tyres ${type.name} (${type.capacity})`,
-                );
-                setShowModal(false);
-              }}>
-              <Text
-                style={{
-                  marginVertical: 8,
-                  fontSize: 16,
-                  color: '#007AFF',
-                }}>{`${index + 1}: ${type.tyres} Tyres ${type.name} (${
-                type.capacity
-              })`}</Text>
+            <React.Fragment key={type?.id || index}>
+              <TouchableOpacity
+                style={styles.truckOption}
+                onPress={() => {
+                  handleInputChange('truckType', formatTruckTypeLabel(type));
+                  setShowModal(false);
+                }}>
+                <Text style={styles.truckName}>{type?.name ?? 'Truck'}</Text>
+                <Text style={styles.truckMeta}>{`No. of tyres: ${
+                  type?.tyres ?? 'N/A'
+                }`}</Text>
+                <Text style={styles.truckMeta}>{`Capacity: ${
+                  type?.capacity ?? 'N/A'
+                }`}</Text>
+              </TouchableOpacity>
               {index < truckTypes.length - 1 && (
-                <View
-                  style={{
-                    height: 1,
-                    backgroundColor: '#000',
-                    marginVertical: 3,
-                    width: '100%',
-                  }}
-                />
+                <View style={styles.truckDivider} />
               )}
-            </TouchableOpacity>
+            </React.Fragment>
           ))}
         </View>
       </View>
@@ -902,6 +904,27 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 17,
     fontWeight: '600',
+  },
+  truckOption: {
+    alignItems: 'flex-start',
+    width: '100%',
+    paddingVertical: 12,
+  },
+  truckName: {
+    fontSize: 16,
+    color: '#000000',
+    fontWeight: '600',
+  },
+  truckMeta: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  truckDivider: {
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    width: '100%',
+    marginVertical: 6,
   },
 });
 
