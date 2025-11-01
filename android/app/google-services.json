@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "53281334067",
-    "project_id": "sharp-order-21054",
-    "storage_bucket": "sharp-order-21054.firebasestorage.app"
+    "project_number": "234092585285",
+    "project_id": "sharporder-4032c",
+    "storage_bucket": "sharporder-4032c.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:53281334067:android:3a7ff10d7ce5965deed446",
+        "mobilesdk_app_id": "1:234092585285:android:f792e81d5bef61ae089e2c",
         "android_client_info": {
           "package_name": "com.sharporder"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCr3k7sLVQkRDnNedCznPNt5FPjk2xfkMo"
+          "current_key": "AIzaSyBLzO_Cibodc-wHSDQzAGh8-uxMD3lZLPA"
         }
       ],
       "services": {

@@ -1,10 +1,4 @@
 {
-  "name": "sharporder",
-  "displayName": "Sharporder",
-  "android": {
-    "package": "com.anonymous.sharporder"
-  },
-  "ios": {
-    "bundleIdentifier": "com.anonymous.sharporder"
-  }
+  "name": "weblah",
+  "displayName": "weblah"
 }
