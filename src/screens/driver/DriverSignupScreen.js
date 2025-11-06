@@ -601,13 +601,24 @@ const DriverSignupScreen = ({navigation}) => {
                   handleInputChange('truckType', formatTruckTypeLabel(type));
                   setShowModal(false);
                 }}>
-                <Text style={styles.truckName}>{type?.name ?? 'Truck'}</Text>
-                <Text style={styles.truckMeta}>{`No. of tyres: ${
-                  type?.tyres ?? 'N/A'
-                }`}</Text>
-                <Text style={styles.truckMeta}>{`Capacity: ${
-                  type?.capacity ?? 'N/A'
-                }`}</Text>
+                {type.imageUrl && (
+                  <Image
+                    source={{uri: type.imageUrl}}
+                    style={{
+                      height: 50,
+                      width: '100',
+                    }}
+                  />
+                )}
+                <View>
+                  <Text style={styles.truckName}>{type?.name ?? 'Truck'}</Text>
+                  <Text style={styles.truckMeta}>{`No. of tyres: ${
+                    type?.tyres ?? 'N/A'
+                  }`}</Text>
+                  <Text style={styles.truckMeta}>{`Capacity: ${
+                    type?.capacity ?? 'N/A'
+                  }`}</Text>
+                </View>
               </TouchableOpacity>
               {index < truckTypes.length - 1 && (
                 <View style={styles.truckDivider} />
@@ -906,7 +917,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   truckOption: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 25,
     width: '100%',
     paddingVertical: 12,
   },
