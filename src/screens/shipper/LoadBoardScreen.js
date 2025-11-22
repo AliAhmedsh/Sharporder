@@ -275,18 +275,32 @@ const LoadBoardScreen = ({navigation}) => {
   };
 
   const handlePostLoad = async () => {
-    if (user) {
-      try {
-        const loadData = {
-          ...formData,
-          shipperId: user.uid,
-          status: 'available',
-        };
-        await addLoad(loadData);
-        console.log('Load posted successfully');
-      } catch (error) {
-        console.error('Error posting load:', error);
+    if (!user) {
+      return;
+    }
+
+    try {
+      const loadData = {
+        ...formData,
+        shipperId: user.uid,
+      };
+
+      const result = await firebaseLoadsService.createLoad(loadData);
+
+      if (!result?.success) {
+        console.error('Error posting load:', result?.error);
+        Alert.alert(
+          'Error',
+          result?.error || 'Failed to post load. Please try again.',
+        );
+        return;
       }
+
+      console.log('Load posted successfully to Firestore:', result.data?.id);
+      Alert.alert('Success', 'Your load has been posted to the loadboard.');
+    } catch (error) {
+      console.error('Error posting load:', error);
+      Alert.alert('Error', 'Failed to post load. Please try again.');
     }
   };
 

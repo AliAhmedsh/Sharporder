@@ -17,7 +17,8 @@ import {
   signOut as firebaseSignOut, 
   sendPasswordResetEmail, 
   deleteUser, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  sendEmailVerification,
 } from '@react-native-firebase/auth';
 import { 
   getFirestore, 
@@ -136,6 +137,15 @@ export const AuthProvider = ({ children }) => {
       };
 
       await setDoc(doc(db, 'users', user.uid), userDoc);
+
+      // Send email verification (best-effort, do not fail signup if this throws)
+      try {
+        if (!user.emailVerified) {
+          await sendEmailVerification(user);
+        }
+      } catch (verificationError) {
+        console.error('Error sending email verification:', verificationError);
+      }
 
       // Update local state
       const updatedUser = {

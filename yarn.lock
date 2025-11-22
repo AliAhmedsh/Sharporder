@@ -2050,13 +2050,6 @@
     prompts "^2.4.2"
     semver "^7.5.2"
 
-"@react-native-community/datetimepicker@^8.5.0":
-  version "8.5.0"
-  resolved "https://registry.yarnpkg.com/@react-native-community/datetimepicker/-/datetimepicker-8.5.0.tgz#8de2d2ab18584d03e161ceb4250216564a4deda0"
-  integrity sha512-RMWll1aPppMtzdJz4we4poNzVj9WUw5URHID7D2ICjGZq3KjrwwexvBnzp75EIYE/ihHXCn/OvYKe73fws9Y/g==
-  dependencies:
-    invariant "^2.2.4"
-
 "@react-native-community/slider@^4.5.6":
   version "4.5.6"
   resolved "https://registry.npmjs.org/@react-native-community/slider/-/slider-4.5.6.tgz"
@@ -6460,6 +6453,11 @@ react-native-country-codes-picker@^2.3.5:
   version "2.3.5"
   resolved "https://registry.npmjs.org/react-native-country-codes-picker/-/react-native-country-codes-picker-2.3.5.tgz"
   integrity sha512-dDQhd0bVvlmgb84NPhTOmTk5UVYPHtk3lqZI+BPb61H1rC2IDrTvPWENg6u1DMGliqWHQDBYpeH37zvxxQL71w==
+
+react-native-date-picker@^5.0.13:
+  version "5.0.13"
+  resolved "https://registry.yarnpkg.com/react-native-date-picker/-/react-native-date-picker-5.0.13.tgz#fe05f58652aaeee9e67f73cf7436c32a623ff3a4"
+  integrity sha512-qCLUODZVsJetO5zuoXjw1D39K527XWqBG8sOfhWdHyPzf13h8RXR1/RSKd1N0fdRDi5GdyizYmB0lPAK12/hbw==
 
 react-native-encrypted-storage@^4.0.3:
   version "4.0.3"

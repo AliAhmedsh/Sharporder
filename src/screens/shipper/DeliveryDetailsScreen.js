@@ -1,5 +1,5 @@
 import {useNavigation} from '@react-navigation/native';
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   Modal,
   ScrollView,
@@ -135,6 +135,72 @@ const DeliveryDetailsScreen = ({
   const navigation = useNavigation();
   const [isReceiving, setIsReceiving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [deliveryQuery, setDeliveryQuery] = useState('');
+  const [deliverySuggestions, setDeliverySuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showDeliverySuggestions, setShowDeliverySuggestions] = useState(false);
+  const deliverySearchTimeoutRef = useRef(null);
+
+  const fetchDeliverySuggestions = async query => {
+    if (!query || query.trim().length < 3) {
+      setDeliverySuggestions([]);
+      setLoadingSuggestions(false);
+      return;
+    }
+
+    try {
+      setLoadingSuggestions(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+          query,
+        )}&format=json&limit=5`,
+        {
+          headers: {
+            'User-Agent': 'Sharporder/1.0 umerjaved3333@gmail.com',
+            Accept: 'application/json',
+          },
+        },
+      );
+
+      const text = await response.text();
+      const results = JSON.parse(text);
+
+      setDeliverySuggestions(
+        Array.isArray(results)
+          ? results.map(item => ({
+              id: `${item.place_id}`,
+              label: item.display_name,
+            }))
+          : [],
+      );
+    } catch (error) {
+      console.error('Delivery address suggestions error:', error);
+      setDeliverySuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (deliverySearchTimeoutRef.current) {
+      clearTimeout(deliverySearchTimeoutRef.current);
+    }
+
+    if (!deliveryQuery || deliveryQuery.trim().length < 3) {
+      setDeliverySuggestions([]);
+      return;
+    }
+
+    deliverySearchTimeoutRef.current = setTimeout(() => {
+      fetchDeliverySuggestions(deliveryQuery.trim());
+    }, 500);
+
+    return () => {
+      if (deliverySearchTimeoutRef.current) {
+        clearTimeout(deliverySearchTimeoutRef.current);
+      }
+    };
+  }, [deliveryQuery]);
 
   const handleContinue = values => {
     onClose();
@@ -208,7 +274,11 @@ const DeliveryDetailsScreen = ({
                         style={styles.input}
                         placeholder="Enter here"
                         value={values.deliveryAddress}
-                        onChangeText={handleChange('deliveryAddress')}
+                        onChangeText={text => {
+                          handleChange('deliveryAddress')(text);
+                          setDeliveryQuery(text);
+                          setShowDeliverySuggestions(true);
+                        }}
                         placeholderTextColor="#C0C0C0"
                       />
                       {touched.deliveryAddress && errors.deliveryAddress && (
@@ -216,6 +286,32 @@ const DeliveryDetailsScreen = ({
                           {errors.deliveryAddress}
                         </Text>
                       )}
+
+                      {showDeliverySuggestions &&
+                        (deliverySuggestions.length > 0 || loadingSuggestions) && (
+                          <View style={styles.suggestionsContainer}>
+                            {loadingSuggestions && (
+                              <View style={styles.suggestionItem}>
+                                <Text style={styles.suggestionText}>
+                                  Searching addresses...
+                                </Text>
+                              </View>
+                            )}
+                            {deliverySuggestions.map(item => (
+                              <TouchableOpacity
+                                key={item.id}
+                                style={styles.suggestionItem}
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                  setShowDeliverySuggestions(false);
+                                  setDeliveryQuery(item.label);
+                                  setFieldValue('deliveryAddress', item.label);
+                                }}>
+                                <Text style={styles.suggestionText}>{item.label}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
                     </View>
 
                     {/* Truck Type */}

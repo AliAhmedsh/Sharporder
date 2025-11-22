@@ -20,7 +20,7 @@ import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
 import ImagePicker from 'react-native-image-crop-picker';
 import {imageUploadService} from '../../services/firebase';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerCom from '../../components/DateTimePickerCom';
 
 const SignUpScreen = ({navigation}) => {
   const {formData, setFormData, showOTPModal, setShowOTPModal} =
@@ -32,8 +32,7 @@ const SignUpScreen = ({navigation}) => {
   const [otpValues, setOtpValues] = useState(['', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [showDobPicker, setShowDobPicker] = useState(false);
-  const [dobTempDate, setDobTempDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleBack = () => {
     navigation.goBack();
@@ -84,19 +83,32 @@ const SignUpScreen = ({navigation}) => {
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
 
-      // Show success message and navigate to dashboard
-      Alert.alert('Success', 'Account created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Navigate to ShipperApp which is the root of the shipper stack
-            navigation.reset({
-              index: 0,
-              routes: [{name: 'ShipperApp'}],
-            });
+      // Send email verification (best-effort)
+      try {
+        const currentUser = auth().currentUser;
+        if (currentUser && !currentUser.emailVerified) {
+          await currentUser.sendEmailVerification();
+        }
+      } catch (verificationError) {
+        console.error('Error sending email verification:', verificationError);
+      }
+
+      // Show success message and navigate to root
+      Alert.alert(
+        'Verify your email',
+        'Account created successfully. We have sent a verification link to your email. Please verify your email address before using the app.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{name: 'ShipperApp'}],
+              });
+            },
           },
-        },
-      ]);
+        ],
+      );
     } catch (error) {
       console.error('Signup error:', error);
       let errorMessage = 'An error occurred during sign up. Please try again.';
@@ -260,14 +272,32 @@ const SignUpScreen = ({navigation}) => {
           <Text style={styles.inputLabel}>Date of birth</Text>
           <TouchableOpacity
             style={styles.input}
-            onPress={() => setShowDobPicker(true)}>
-            <Text style={{
-              fontSize: 16,
-              color: formData.dateOfBirth ? '#333333' : '#C0C0C0',
-            }}>
-              {formData.dateOfBirth || 'Select date of birth'}
+            onPress={() => setShowDatePicker(true)}>
+            <Text
+              style={{
+                fontSize: 16,
+                color: formData.dateOfBirth ? '#333333' : '#C0C0C0',
+              }}>
+              {formData.dateOfBirth || 'YYYY-MM-DD'}
             </Text>
           </TouchableOpacity>
+
+          <DateTimePickerCom
+            show={showDatePicker}
+            setShow={setShowDatePicker}
+            initialDate={
+              formData.dateOfBirth
+                ? new Date(formData.dateOfBirth)
+                : undefined
+            }
+            onDateChange={selectedDate => {
+              const year = selectedDate.getFullYear();
+              const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+              const day = String(selectedDate.getDate()).padStart(2, '0');
+              const formatted = `${year}-${month}-${day}`;
+              setFormData({...formData, dateOfBirth: formatted});
+            }}
+          />
         </View>
 
         <View style={styles.inputContainer}>
@@ -444,29 +474,6 @@ const SignUpScreen = ({navigation}) => {
         </TouchableOpacity>
       </Modal>
 
-      {showDobPicker && (
-        <DateTimePicker
-          value={dobTempDate}
-          mode="date"
-          display="spinner"
-          maximumDate={new Date()}
-          onChange={(event, selectedDate) => {
-            if (event.type === 'dismissed') {
-              setShowDobPicker(false);
-              return;
-            }
-
-            const date = selectedDate || dobTempDate;
-            setDobTempDate(date);
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            const formatted = `${yyyy}-${mm}-${dd}`;
-            setFormData({...formData, dateOfBirth: formatted});
-            setShowDobPicker(false);
-          }}
-        />
-      )}
     </SafeAreaView>
   );
 };

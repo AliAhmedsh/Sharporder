@@ -22,6 +22,7 @@ import camera from '../../assets/icons/camera.png';
 import {firebase} from '@react-native-firebase/auth';
 import ImagePicker from 'react-native-image-crop-picker';
 import {imageUploadService} from '../../services/firebase';
+import DateTimePickerCom from '../../components/DateTimePickerCom';
 
 const DriverSignupScreen = ({navigation}) => {
   const {signUp} = useAuth();
@@ -35,6 +36,7 @@ const DriverSignupScreen = ({navigation}) => {
   const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
   const [isUploadingLicenseImage, setIsUploadingLicenseImage] = useState(false);
   const [isUploadingTruckPhoto, setIsUploadingTruckPhoto] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -336,23 +338,47 @@ const DriverSignupScreen = ({navigation}) => {
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Date of birth</Text>
           <View style={styles.inputWithIcon}>
-            <TextInput
+            <TouchableOpacity
               style={[
                 styles.textInput,
                 styles.textInputWithIcon,
                 validationErrors.dateOfBirth && styles.inputError,
               ]}
-              placeholder="DD/MM/YYYY"
-              placeholderTextColor="#C7C7CD"
-              value={formData.dateOfBirth}
-              onChangeText={value => handleInputChange('dateOfBirth', value)}
-              editable={!submitting}
-            />
-            <TouchableOpacity style={styles.iconButton} disabled={submitting}>
+              onPress={() => setShowDatePicker(true)}
+              disabled={submitting}>
+              <Text
+                style={{
+                  fontSize: 17,
+                  color: formData.dateOfBirth ? '#000000' : '#C7C7CD',
+                }}>
+                {formData.dateOfBirth || 'YYYY-MM-DD'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => setShowDatePicker(true)}
+              disabled={submitting}>
               <Image source={calender} style={styles.inputCalenderImage} />
             </TouchableOpacity>
           </View>
           {renderInputError('dateOfBirth')}
+
+          <DateTimePickerCom
+            show={showDatePicker}
+            setShow={setShowDatePicker}
+            initialDate={
+              formData.dateOfBirth
+                ? new Date(formData.dateOfBirth)
+                : undefined
+            }
+            onDateChange={selectedDate => {
+              const year = selectedDate.getFullYear();
+              const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+              const day = String(selectedDate.getDate()).padStart(2, '0');
+              const formatted = `${year}-${month}-${day}`;
+              handleInputChange('dateOfBirth', formatted);
+            }}
+          />
         </View>
 
         <View style={styles.inputGroup}>
