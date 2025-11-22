@@ -19,7 +19,7 @@ import {useAuth} from '../context/AuthContext';
 
 const LoginScreen = ({navigation}) => {
   const {formData, setFormData} = useAppContext();
-  const {signIn, resetPassword} = useAuth();
+  const {signIn, resetPassword, resendVerificationEmail} = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,6 +49,35 @@ const LoginScreen = ({navigation}) => {
 
   const [loginError, setLoginError] = useState('');
 
+  const handleResendVerification = async () => {
+    if (!email.trim() || !formData.password) {
+      Alert.alert(
+        'Email and password required',
+        'Please enter your email and password first, then try resending the verification email.',
+      );
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const result = await resendVerificationEmail(email, formData.password);
+
+      if (result.success) {
+        Alert.alert('Verification Email Sent', result.message);
+      } else {
+        Alert.alert('Unable to Resend', result.error || 'Please try again.');
+      }
+    } catch (error) {
+      console.error('handleResendVerification error:', error);
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred while resending verification email.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleLogin = async () => {
     if (!validateForm()) {
       return;
@@ -64,13 +93,23 @@ const LoginScreen = ({navigation}) => {
 
       if (result && result.success) {
         console.log('Login successful, waiting for navigation...');
-        // The navigation will be handled by the auth state change in AppNavigator
-        // No need to navigate manually here
+        // Navigation is handled by the auth state change in AppNavigator
       } else {
         const errorMessage = result?.error || 'Login failed. Please try again.';
         console.error('Login failed:', errorMessage);
         setLoginError(errorMessage);
-        Alert.alert('Login Failed', errorMessage);
+
+        if (errorMessage.toLowerCase().includes('not verified')) {
+          Alert.alert('Login Failed', errorMessage, [
+            {text: 'Cancel', style: 'cancel'},
+            {
+              text: 'Resend verification email',
+              onPress: handleResendVerification,
+            },
+          ]);
+        } else {
+          Alert.alert('Login Failed', errorMessage);
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -223,6 +262,20 @@ const LoginScreen = ({navigation}) => {
             </View>
             {renderInputError('password')}
           </View>
+
+          {loginError &&
+            loginError
+              .toLowerCase()
+              .includes('not verified') && (
+              <TouchableOpacity
+                onPress={handleResendVerification}
+                disabled={submitting}
+                style={styles.resendLinkContainer}>
+                <Text style={styles.resendLinkText}>
+                  Resend verification email
+                </Text>
+              </TouchableOpacity>
+            )}
 
           <View style={styles.loginLinks}>
             <TouchableOpacity

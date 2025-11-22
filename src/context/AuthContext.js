@@ -225,6 +225,26 @@ export const AuthProvider = ({ children }) => {
       const userType = userData.userType || 'shipper';
       console.log('User type determined as:', userType);
 
+      // Enforce email verification ONLY for drivers (case-insensitive)
+      if (
+        typeof userType === 'string' &&
+        userType.toLowerCase() === 'driver' &&
+        !user.emailVerified
+      ) {
+        console.log('Blocking sign in for unverified driver email:', user.email);
+        try {
+          await firebaseSignOut(auth);
+        } catch (signOutError) {
+          console.error('Error signing out unverified driver:', signOutError);
+        }
+
+        return {
+          success: false,
+          error:
+            'Your email is not verified. Please check your inbox and verify your email before logging in.',
+        };
+      }
+
       // Create updated user object with profile data
       const updatedUser = {
         ...user,
@@ -370,6 +390,59 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Resend email verification for a user by signing in temporarily
+  const resendVerificationEmail = async (email, password) => {
+    try {
+      if (!email || !email.trim() || !password) {
+        return {
+          success: false,
+          error: 'Email and password are required to resend verification.',
+        };
+      }
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password,
+      );
+
+      const { user } = userCredential;
+
+      if (!user) {
+        throw new Error('No user returned from authentication');
+      }
+
+      if (user.emailVerified) {
+        await firebaseSignOut(auth);
+        return {
+          success: false,
+          error: 'Your email is already verified. You can log in normally.',
+        };
+      }
+
+      await sendEmailVerification(user);
+
+      try {
+        await firebaseSignOut(auth);
+      } catch (signOutError) {
+        console.error('Error signing out after resendVerificationEmail:', signOutError);
+      }
+
+      return {
+        success: true,
+        message: 'Verification email resent. Please check your inbox.',
+      };
+    } catch (error) {
+      console.error('Resend verification email error:', error);
+      return {
+        success: false,
+        error:
+          getAuthErrorMessage(error.code) ||
+          'Failed to resend verification email. Please try again.',
+      };
+    }
+  };
+
   // Helper function to get readable error messages
   const getAuthErrorMessage = (errorCode) => {
     switch (errorCode) {
@@ -418,14 +491,35 @@ export const AuthProvider = ({ children }) => {
           if (userData) {
             const userType = userData.userType || 'shipper';
             console.log('User data retrieved, type:', userType);
-            
+
+            // If this is a driver with unverified email, treat as signed out
+            if (
+              typeof userType === 'string' &&
+              userType.toLowerCase() === 'driver' &&
+              !currentUser.emailVerified
+            ) {
+              console.log(
+                'Auth state: unverified driver detected, signing out in listener',
+              );
+              try {
+                await firebaseSignOut(auth);
+              } catch (e) {
+                console.error('Error signing out unverified driver in listener:', e);
+              }
+              // Do not set user state; leave them on auth screens
+              return;
+            }
+
             // Create updated user object with profile data
             const updatedUser = {
               ...currentUser,
               ...userData,
-              displayName: userData.displayName || currentUser.displayName || currentUser.email?.split('@')[0],
+              displayName:
+                userData.displayName ||
+                currentUser.displayName ||
+                currentUser.email?.split('@')[0],
             };
-            
+
             // Update state
             setUser(updatedUser);
             setUserType(userType);
@@ -528,6 +622,7 @@ export const AuthProvider = ({ children }) => {
     signUp, // Use our custom signUp function
     signOut,
     resetPassword,
+    resendVerificationEmail,
     updateProfile,
     getUserData,
     getAuthErrorMessage,

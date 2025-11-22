@@ -357,9 +357,16 @@ const LoadBoardScreen = ({navigation}) => {
         : load?.fareOffer || '—';
     const statusLabel = getStatusLabel(load?.status);
 
-    // Check if load has bids by looking at status and if there are any bids
-    const hasBids =
-      load?.bidders && Array.isArray(load.bidders) && load.bidders.length > 0;
+    // Determine bid count from bidders array or bidCount field
+    const bidCount =
+      typeof load?.bidCount === 'number'
+        ? load.bidCount
+        : Array.isArray(load?.bidders)
+        ? load.bidders.length
+        : 0;
+
+    // Check if load has bids using actual count
+    const hasBids = bidCount > 0;
 
     return (
       <TouchableOpacity onPress={() => onLoadPress(load)} activeOpacity={0.9}>
@@ -393,9 +400,7 @@ const LoadBoardScreen = ({navigation}) => {
               <Text style={styles.detailIcon}>👨‍✈️</Text>
               <Text style={styles.detailText}>
                 {hasBids
-                  ? `${load?.bidCount || 'Multiple'} bid${
-                      (load?.bidCount || 'Multiple') > 1 ? 's' : ''
-                    }`
+                  ? `${bidCount} bid${bidCount > 1 ? 's' : ''}`
                   : 'No bids yet'}
               </Text>
             </View>

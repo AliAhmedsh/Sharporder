@@ -261,6 +261,21 @@ const DriverDashboardScreen = ({navigation}) => {
     }
   };
 
+  const driverName =
+    user?.displayName ||
+    (user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.email) ||
+    'Driver';
+
+  const driverInitials = driverName
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   const bottomSheetHeight = Math.round(height * 0.95);
   const PEEK_HEIGHT = 350;
   const bottomSheetTranslateY = useRef(
@@ -703,15 +718,15 @@ const DriverDashboardScreen = ({navigation}) => {
         <ScrollView contentContainerStyle={{paddingTop: 60}}>
           <View style={styles.drawerProfile}>
             <View style={styles.drawerAvatar}>
-              <Text style={styles.drawerAvatarText}>OO</Text>
+              <Text style={styles.drawerAvatarText}>{driverInitials}</Text>
             </View>
             <View style={styles.drawerInfo}>
-              <Text style={styles.drawerBusinessName}>
-                Onyinyechukwu Balogun
-              </Text>
+              <Text style={styles.drawerBusinessName}>{driverName}</Text>
               <View style={styles.drawerRating}>
                 <Text style={styles.drawerStar}>⭐</Text>
-                <Text style={styles.drawerRatingText}>4.89</Text>
+                <Text style={styles.drawerRatingText}>
+                  {(user?.rating || 4.89).toString()}
+                </Text>
               </View>
             </View>
           </View>
@@ -841,18 +856,30 @@ const DriverDashboardScreen = ({navigation}) => {
                 <View style={styles.onlineLocationItem}>
                   <View style={styles.greenDot} />
                   <Text style={styles.onlineLocationText}>
-                    15 Bode Thomas Street, Surulere, Lagos
+                    {selectedLoad?.pickupAddress || 'Pickup address'}
                   </Text>
                 </View>
                 <View style={styles.onlineLocationItem}>
                   <View style={styles.purpleDot} />
                   <Text style={styles.onlineLocationText}>
-                    35 Hakeem Dickson Street, Lekki Phase 1, Lagos
+                    {selectedLoad?.deliveryAddress || 'Delivery address'}
                   </Text>
                 </View>
               </View>
 
-              <Text style={styles.modalPrice}>NGN 15,000</Text>
+              <Text style={styles.onlineCapacity}>
+                {selectedLoad?.truckType || 'Truck type not specified'}
+              </Text>
+
+              <Text style={styles.modalPrice}>
+                {typeof selectedLoad?.fareOffer === 'number'
+                  ? `NGN ${
+                      (selectedLoad.fareOffer.toLocaleString &&
+                        selectedLoad.fareOffer.toLocaleString()) ||
+                      selectedLoad.fareOffer
+                    }`
+                  : selectedLoad?.fareOffer || 'NGN -'}
+              </Text>
 
               <TouchableOpacity
                 style={styles.modalAcceptButton}

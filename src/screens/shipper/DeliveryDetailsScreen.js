@@ -51,51 +51,31 @@ const TruckSelector = ({showTruckSelector, setShowTruckSelector}) => {
             contentContainerStyle={styles.truckScrollContent}>
             {[
               {
-                name: 'Standard Rigid Dump Truck',
+                name: 'Dump Truck 8 tires',
                 specs: [
-                  'Capacity: 10-30 cubic yards',
-                  'Load weight: 15-25 tons',
-                  'Tyres: 6',
+                  'Capacity: 20-25 tons',
+                  'Tyres: 8',
                 ],
               },
               {
-                name: 'Articulated Dump Truck',
+                name: 'Dump Truck 10 tires',
                 specs: [
-                  'Capacity: 25-45 cubic yards',
-                  'Load weight: 35-45 tons',
+                  'Capacity: 30-35 tons',
                   'Tyres: 10',
                 ],
               },
               {
-                name: 'Transfer Dump Truck',
+                name: 'Dump Truck 12 tires',
                 specs: [
-                  'Capacity: 15-25 cubic yards',
-                  'Load weight: 20-30 tons combined',
-                  'Tyres: 8',
-                ],
-              },
-              {
-                name: 'Super Dump Truck',
-                specs: [
-                  'Capacity: 20-30 cubic yards',
-                  'Load weight: 26-33 tons',
+                  'Capacity: 35-40 tons',
                   'Tyres: 12',
                 ],
               },
               {
-                name: 'Semi-trailer End Dump Truck',
+                name: 'Dump Truck 16 tires',
                 specs: [
-                  'Capacity: 20-30 cubic yards',
-                  'Load weight: 20-25 tons',
-                  'Tyres: 8',
-                ],
-              },
-              {
-                name: 'Double/Triple Bottom Dump',
-                specs: [
-                  'Capacity: 30-40 cubic yards',
-                  'Load weight: 40-50 tons',
-                  'Tyres: 14',
+                  'Capacity: 50-60 tons',
+                  'Tyres: 16',
                 ],
               },
             ].map(truck => (

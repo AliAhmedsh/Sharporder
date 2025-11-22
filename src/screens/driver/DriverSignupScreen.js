@@ -225,7 +225,7 @@ const DriverSignupScreen = ({navigation}) => {
         displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
       };
 
-      // Use AuthContext's signUp function
+      // Use AuthContext's signUp function (this also sends email verification)
       const result = await signUp(
         formData.email.trim(),
         formData.password,
@@ -233,11 +233,21 @@ const DriverSignupScreen = ({navigation}) => {
       );
 
       if (result.success) {
-        // Smoothly navigate to dashboard/root without blocking alerts
-        navigation.reset({
-          index: 0,
-          routes: [{name: 'DriverApp'}],
-        });
+        Alert.alert(
+          'Verify your email',
+          'Account created successfully. We have sent a verification link to your email. Please verify your email address before logging in as a driver.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                });
+              },
+            },
+          ],
+        );
       } else {
         Alert.alert(
           'Registration Failed',

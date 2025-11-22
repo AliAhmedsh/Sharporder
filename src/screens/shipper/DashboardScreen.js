@@ -89,7 +89,7 @@ const BookingSearch = ({
 const {height, width: screenWidth} = Dimensions.get('window');
 
 const DashboardScreen = ({navigation}) => {
-  const {signOut} = useAuth();
+  const {signOut, user} = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -279,6 +279,17 @@ const DashboardScreen = ({navigation}) => {
 
   const [formData, setFormData] = useState({});
 
+  const businessName =
+    user?.businessName || user?.displayName || user?.email || 'Your business';
+
+  const businessInitials = businessName
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
@@ -356,15 +367,15 @@ const DashboardScreen = ({navigation}) => {
         <ScrollView contentContainerStyle={{paddingTop: 60}}>
           <View style={styles.drawerProfile}>
             <View style={styles.drawerAvatar}>
-              <Text style={styles.drawerAvatarText}>VV</Text>
+              <Text style={styles.drawerAvatarText}>{businessInitials}</Text>
             </View>
             <View style={styles.drawerInfo}>
-              <Text style={styles.drawerBusinessName}>
-                Vonsmallhousen Ventures
-              </Text>
+              <Text style={styles.drawerBusinessName}>{businessName}</Text>
               <View style={styles.drawerRating}>
                 <Text style={styles.drawerStar}>⭐</Text>
-                <Text style={styles.drawerRatingText}>4.89</Text>
+                <Text style={styles.drawerRatingText}>
+                  {(user?.rating || 4.89).toString()}
+                </Text>
               </View>
             </View>
           </View>

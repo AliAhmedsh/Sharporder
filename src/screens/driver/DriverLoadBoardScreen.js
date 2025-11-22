@@ -65,6 +65,8 @@ const DriverLoadBoardScreen = ({ navigation }) => {
           id: l.id,
           _loadId: l.id, // keep original id for actions
           route: `${l.pickupAddress || '-'} → ${l.deliveryAddress || '-'}`,
+          pickupAddress: l.pickupAddress || '-',
+          deliveryAddress: l.deliveryAddress || '-',
           time: l.createdAt ? (l.createdAt.toLocaleString?.() || new Date(l.createdAt).toLocaleString()) : 'Just now',
           weight: l.weight ? `${l.weight} Kg` : '—',
           dimensions: l.dimensions || '—',
@@ -210,19 +212,23 @@ const DriverLoadBoardScreen = ({ navigation }) => {
         onRequestClose={() => setShowDetailsModal(false)}
         statusBarTranslucent
       >
-        <TouchableOpacity 
-          style={styles.modalBackdrop} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
           onPress={() => setShowDetailsModal(false)}
         >
-          <View style={styles.detailsModalWrapper} onStartShouldSetResponder={() => true}>
-            <Animated.View 
+          <TouchableOpacity
+            style={styles.detailsModalWrapper}
+            activeOpacity={1}
+            onPress={e => e.stopPropagation()}
+          >
+            <Animated.View
               style={[
                 styles.detailsModalContent,
                 {
                   opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }]
-                }
+                  transform: [{translateY: slideAnim}],
+                },
               ]}
             >
               <View style={styles.modalPullBar} />
@@ -293,6 +299,26 @@ const DriverLoadBoardScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.fareSection}>
+                      <View style={styles.fareDetailsRow}>
+                        <View style={styles.fareDetailItem}>
+                          <Text style={styles.fareDetailLabel}>Pickup</Text>
+                          <Text style={styles.fareDetailValue}>
+                            {selectedLoad.pickupAddress}
+                          </Text>
+                        </View>
+                        <View style={styles.fareDetailItem}>
+                          <Text style={styles.fareDetailLabel}>Delivery</Text>
+                          <Text style={styles.fareDetailValue}>
+                            {selectedLoad.deliveryAddress}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.fareOfferedLabel}>Offered fare</Text>
+                      <Text style={styles.fareOfferedValue}>
+                        {selectedLoad.priceRange}
+                      </Text>
+
                       <Text style={styles.fareLabel}>Fare</Text>
                       <TextInput
                         style={styles.fareInput}
@@ -360,7 +386,7 @@ const DriverLoadBoardScreen = ({ navigation }) => {
                 </ScrollView>
               </KeyboardAvoidingView>
             </Animated.View>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     );
@@ -1156,6 +1182,36 @@ const styles = StyleSheet.create({
   },
   fareSection: {
     marginTop: 10,
+  },
+  fareDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  fareDetailItem: {
+    flex: 1,
+    marginRight: 8,
+  },
+  fareDetailLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  fareDetailValue: {
+    fontSize: 14,
+    color: '#000',
+    fontWeight: '500',
+  },
+  fareOfferedLabel: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#666',
+  },
+  fareOfferedValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 16,
   },
   fareLabel: {
     fontSize: 16,
