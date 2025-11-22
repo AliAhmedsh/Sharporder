@@ -147,7 +147,11 @@ const TripDetailsScreen = ({
             <View style={styles.tripDetailCard}>
               <Text style={styles.inputLabel}>Load image</Text>
               <View style={styles.imageContainer}>
-                <Text style={styles.imageText}>img_20250807.jpg</Text>
+                <Text style={styles.imageText}>
+                  {formData.loadImageUrl
+                    ? formData.loadImageUrl.split('/').pop().split('?')[0]
+                    : 'No image selected'}
+                </Text>
                 <Text style={styles.uploadIcon}>↗</Text>
               </View>
             </View>

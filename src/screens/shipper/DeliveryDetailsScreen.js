@@ -12,6 +12,8 @@ import {
 import {useAppContext} from '../../context/AppContext';
 import {Formik, useFormikContext} from 'formik';
 import * as Yup from 'yup';
+import ImagePicker from 'react-native-image-crop-picker';
+import {imageUploadService} from '../../services/firebase';
 
 const validationSchema = Yup.object().shape({
   pickupAddress: Yup.string(),
@@ -132,6 +134,7 @@ const DeliveryDetailsScreen = ({
   const {showTruckSelector, setShowTruckSelector} = useAppContext();
   const navigation = useNavigation();
   const [isReceiving, setIsReceiving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const handleContinue = values => {
     onClose();
@@ -166,12 +169,13 @@ const DeliveryDetailsScreen = ({
                 deliveryAddress: '',
                 truckType: '',
                 loadDescription: '',
+                loadImageUrl: '',
                 recipientName: '',
                 recipientNumber: '',
               }}
               validationSchema={validationSchema}
               onSubmit={handleContinue}>
-              {({handleChange, handleSubmit, values, errors, touched}) => (
+              {({handleChange, handleSubmit, setFieldValue, values, errors, touched}) => (
                 <>
                   <ScrollView
                     style={styles.formContainer}
@@ -252,12 +256,46 @@ const DeliveryDetailsScreen = ({
                     </View>
 
                     {/* Load Image */}
-                    <TouchableOpacity style={styles.inputContainer}>
+                    <TouchableOpacity
+                      style={styles.inputContainer}
+                      onPress={async () => {
+                        try {
+                          setIsUploadingImage(true);
+                          const image = await ImagePicker.openPicker({
+                            width: 800,
+                            height: 800,
+                            cropping: true,
+                            mediaType: 'photo',
+                          });
+
+                          if (!image?.path) {
+                            setIsUploadingImage(false);
+                            return;
+                          }
+
+                          const downloadUrl = await imageUploadService.uploadImage(
+                            image.path,
+                            'load-images',
+                          );
+
+                          setFieldValue('loadImageUrl', downloadUrl);
+                        } catch (error) {
+                          console.error('Load image pick/upload error:', error);
+                        } finally {
+                          setIsUploadingImage(false);
+                        }
+                      }}>
                       <Text style={styles.inputLabel}>
                         Load image (optional)
                       </Text>
                       <View style={styles.uploadContainer}>
-                        <Text style={styles.uploadText}>Upload here</Text>
+                        <Text style={styles.uploadText}>
+                          {isUploadingImage
+                            ? 'Uploading...'
+                            : values.loadImageUrl
+                            ? 'Image selected'
+                            : 'Upload here'}
+                        </Text>
                         <Text style={styles.uploadIcon}>↗</Text>
                       </View>
                     </TouchableOpacity>

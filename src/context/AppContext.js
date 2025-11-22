@@ -33,6 +33,7 @@ export const AppProvider = ({ children }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     businessName: '',
+    dateOfBirth: '',
     email: '',
     phone: '+234 08012345678',
     password: '',

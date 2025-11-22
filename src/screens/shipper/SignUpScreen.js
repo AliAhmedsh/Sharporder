@@ -18,6 +18,9 @@ import {
 import {useAppContext} from '../../context/AppContext';
 import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
+import ImagePicker from 'react-native-image-crop-picker';
+import {imageUploadService} from '../../services/firebase';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const SignUpScreen = ({navigation}) => {
   const {formData, setFormData, showOTPModal, setShowOTPModal} =
@@ -28,6 +31,9 @@ const SignUpScreen = ({navigation}) => {
   const [isChecked, setIsChecked] = useState(false);
   const [otpValues, setOtpValues] = useState(['', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showDobPicker, setShowDobPicker] = useState(false);
+  const [dobTempDate, setDobTempDate] = useState(new Date());
 
   const handleBack = () => {
     navigation.goBack();
@@ -69,8 +75,10 @@ const SignUpScreen = ({navigation}) => {
       await firestore().collection('users').doc(uid).set({
         uid: uid,
         businessName: formData.businessName.trim(),
+        dateOfBirth: formData.dateOfBirth || null,
         email: email,
         phone: formData.phone.trim(),
+        logoUrl: formData.logoUrl || null,
         userType: 'shipper',
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
@@ -189,6 +197,53 @@ const SignUpScreen = ({navigation}) => {
         </View>
 
         <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Business logo (optional)</Text>
+          <TouchableOpacity
+            style={styles.uploadContainer}
+            onPress={async () => {
+              try {
+                setIsUploadingLogo(true);
+                const image = await ImagePicker.openPicker({
+                  width: 800,
+                  height: 800,
+                  cropping: true,
+                  mediaType: 'photo',
+                });
+
+                if (!image?.path) {
+                  setIsUploadingLogo(false);
+                  return;
+                }
+
+                const downloadUrl = await imageUploadService.uploadImage(
+                  image.path,
+                  'shipper-logos',
+                );
+
+                setFormData({...formData, logoUrl: downloadUrl});
+              } catch (error) {
+                console.error('Business logo upload error:', error);
+                if (typeof Alert.alert === 'function') {
+                  Alert.alert(
+                    'Upload failed',
+                    'Could not upload business logo. Please try again.',
+                  );
+                }
+              } finally {
+                setIsUploadingLogo(false);
+              }
+            }}>
+            <Text style={styles.uploadText}>
+              {isUploadingLogo
+                ? 'Uploading...'
+                : formData.logoUrl
+                ? 'Logo selected'
+                : 'Upload here'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Business name</Text>
           <TextInput
             style={styles.input}
@@ -199,6 +254,20 @@ const SignUpScreen = ({navigation}) => {
             }
             placeholderTextColor="#C0C0C0"
           />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Date of birth</Text>
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowDobPicker(true)}>
+            <Text style={{
+              fontSize: 16,
+              color: formData.dateOfBirth ? '#333333' : '#C0C0C0',
+            }}>
+              {formData.dateOfBirth || 'Select date of birth'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.inputContainer}>
@@ -374,6 +443,30 @@ const SignUpScreen = ({navigation}) => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {showDobPicker && (
+        <DateTimePicker
+          value={dobTempDate}
+          mode="date"
+          display="spinner"
+          maximumDate={new Date()}
+          onChange={(event, selectedDate) => {
+            if (event.type === 'dismissed') {
+              setShowDobPicker(false);
+              return;
+            }
+
+            const date = selectedDate || dobTempDate;
+            setDobTempDate(date);
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            const formatted = `${yyyy}-${mm}-${dd}`;
+            setFormData({...formData, dateOfBirth: formatted});
+            setShowDobPicker(false);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };

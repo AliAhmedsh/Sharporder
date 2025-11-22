@@ -20,6 +20,8 @@ import upload from '../../assets/icons/upload.png';
 import calender from '../../assets/icons/calender.png';
 import camera from '../../assets/icons/camera.png';
 import {firebase} from '@react-native-firebase/auth';
+import ImagePicker from 'react-native-image-crop-picker';
+import {imageUploadService} from '../../services/firebase';
 
 const DriverSignupScreen = ({navigation}) => {
   const {signUp} = useAuth();
@@ -30,6 +32,9 @@ const DriverSignupScreen = ({navigation}) => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
+  const [isUploadingLicenseImage, setIsUploadingLicenseImage] = useState(false);
+  const [isUploadingTruckPhoto, setIsUploadingTruckPhoto] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -41,6 +46,9 @@ const DriverSignupScreen = ({navigation}) => {
     password: '',
     confirmPassword: '',
     licenseNumber: '',
+    profilePhotoUrl: '',
+    licenseImageUrl: '',
+    truckPhotoUrl: '',
   });
 
   const [truckTypes, setTruckTypes] = useState([]);
@@ -208,6 +216,9 @@ const DriverSignupScreen = ({navigation}) => {
         dateOfBirth: formData.dateOfBirth,
         truckType: formData.truckType,
         licenseNumber: formData.licenseNumber.trim(),
+        profilePhotoUrl: formData.profilePhotoUrl || null,
+        licenseImageUrl: formData.licenseImageUrl || null,
+        truckPhotoUrl: formData.truckPhotoUrl || null,
         userType: 'driver',
         displayName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
       };
@@ -484,7 +495,39 @@ const DriverSignupScreen = ({navigation}) => {
       </View>
 
       <View style={styles.photoContainer}>
-        <TouchableOpacity style={styles.photoPlaceholder} disabled={submitting}>
+        <TouchableOpacity
+          style={styles.photoPlaceholder}
+          disabled={submitting}
+          onPress={async () => {
+            try {
+              setIsUploadingProfilePhoto(true);
+              const image = await ImagePicker.openCamera({
+                width: 800,
+                height: 800,
+                cropping: true,
+                mediaType: 'photo',
+              });
+
+              if (!image?.path) {
+                setIsUploadingProfilePhoto(false);
+                return;
+              }
+
+              const downloadUrl = await imageUploadService.uploadImage(
+                image.path,
+                'driver-profile-photos',
+              );
+
+              setFormData(prev => ({
+                ...prev,
+                profilePhotoUrl: downloadUrl,
+              }));
+            } catch (error) {
+              console.error('Profile photo upload error:', error);
+            } finally {
+              setIsUploadingProfilePhoto(false);
+            }
+          }}>
           <Image source={camera} style={styles.cameraIcon} />
         </TouchableOpacity>
       </View>
@@ -499,8 +542,46 @@ const DriverSignupScreen = ({navigation}) => {
 
         <View style={styles.documentInputGroup}>
           <Text style={styles.inputLabel}>Driver's licence</Text>
-          <TouchableOpacity style={styles.uploadField} disabled={submitting}>
-            <Text style={styles.uploadText}>Upload here</Text>
+          <TouchableOpacity
+            style={styles.uploadField}
+            disabled={submitting}
+            onPress={async () => {
+              try {
+                setIsUploadingLicenseImage(true);
+                const image = await ImagePicker.openPicker({
+                  width: 1200,
+                  height: 800,
+                  cropping: true,
+                  mediaType: 'photo',
+                });
+
+                if (!image?.path) {
+                  setIsUploadingLicenseImage(false);
+                  return;
+                }
+
+                const downloadUrl = await imageUploadService.uploadImage(
+                  image.path,
+                  'driver-licences',
+                );
+
+                setFormData(prev => ({
+                  ...prev,
+                  licenseImageUrl: downloadUrl,
+                }));
+              } catch (error) {
+                console.error("Driver's licence upload error:", error);
+              } finally {
+                setIsUploadingLicenseImage(false);
+              }
+            }}>
+            <Text style={styles.uploadText}>
+              {isUploadingLicenseImage
+                ? 'Uploading...'
+                : formData.licenseImageUrl
+                ? 'Image selected'
+                : 'Upload here'}
+            </Text>
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
         </View>
@@ -519,8 +600,46 @@ const DriverSignupScreen = ({navigation}) => {
 
         <View style={styles.documentInputGroup}>
           <Text style={styles.inputLabel}>Photo of truck</Text>
-          <TouchableOpacity style={styles.uploadField} disabled={submitting}>
-            <Text style={styles.uploadText}>Upload here</Text>
+          <TouchableOpacity
+            style={styles.uploadField}
+            disabled={submitting}
+            onPress={async () => {
+              try {
+                setIsUploadingTruckPhoto(true);
+                const image = await ImagePicker.openPicker({
+                  width: 1200,
+                  height: 800,
+                  cropping: true,
+                  mediaType: 'photo',
+                });
+
+                if (!image?.path) {
+                  setIsUploadingTruckPhoto(false);
+                  return;
+                }
+
+                const downloadUrl = await imageUploadService.uploadImage(
+                  image.path,
+                  'driver-truck-photos',
+                );
+
+                setFormData(prev => ({
+                  ...prev,
+                  truckPhotoUrl: downloadUrl,
+                }));
+              } catch (error) {
+                console.error('Truck photo upload error:', error);
+              } finally {
+                setIsUploadingTruckPhoto(false);
+              }
+            }}>
+            <Text style={styles.uploadText}>
+              {isUploadingTruckPhoto
+                ? 'Uploading...'
+                : formData.truckPhotoUrl
+                ? 'Image selected'
+                : 'Upload here'}
+            </Text>
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
         </View>
