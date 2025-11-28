@@ -9,7 +9,20 @@ import {Platform} from 'react-native';
 // - initialDate: optional Date to initialize picker
 // - onDateChange: callback(Date) when user confirms a date
 const DateTimePickerCom = ({onDateChange, show, setShow, initialDate}) => {
-  const [date, setDate] = useState(initialDate || new Date());
+  const today = new Date();
+  const eighteenYearsAgo = new Date(
+    today.getFullYear() - 18,
+    today.getMonth(),
+    today.getDate(),
+  );
+  const eightyYearsAgo = new Date(
+    today.getFullYear() - 80,
+    today.getMonth(),
+    today.getDate(),
+  );
+
+  // Default to 18 years ago if no initial date is provided
+  const [date, setDate] = useState(initialDate || eighteenYearsAgo);
 
   useEffect(() => {
     if (initialDate instanceof Date) {
@@ -21,13 +34,6 @@ const DateTimePickerCom = ({onDateChange, show, setShow, initialDate}) => {
       }
     }
   }, [initialDate]);
-
-  const today = new Date();
-  const eighteenYearsAgo = new Date(
-    today.getFullYear() - 18,
-    today.getMonth(),
-    today.getDate(),
-  );
 
   const handleConfirm = selectedDate => {
     setShow(false);
@@ -47,6 +53,7 @@ const DateTimePickerCom = ({onDateChange, show, setShow, initialDate}) => {
       open={show}
       date={date}
       mode="date"
+      minimumDate={eightyYearsAgo}
       maximumDate={eighteenYearsAgo}
       onConfirm={handleConfirm}
       onCancel={handleCancel}

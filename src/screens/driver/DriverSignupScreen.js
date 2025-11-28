@@ -5,14 +5,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   TextInput,
   Alert,
   Modal,
   Image,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../../context/AuthContext';
 import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
@@ -540,8 +541,16 @@ const DriverSignupScreen = ({navigation}) => {
               const image = await ImagePicker.openCamera({
                 width: 800,
                 height: 800,
-                cropping: true,
                 mediaType: 'photo',
+                ...(Platform.OS === 'ios'
+                  ? {
+                      cropping: true,
+                      cropperToolbarTitle: 'Crop profile photo',
+                      cropperStatusBarColor: '#000000',
+                      cropperToolbarColor: '#000000',
+                      cropperToolbarWidgetColor: '#ffffff',
+                    }
+                  : {cropping: false}),
               });
 
               if (!image?.path) {
@@ -564,7 +573,15 @@ const DriverSignupScreen = ({navigation}) => {
               setIsUploadingProfilePhoto(false);
             }
           }}>
-          <Image source={camera} style={styles.cameraIcon} />
+          {formData.profilePhotoUrl ? (
+            <Image
+              source={{uri: formData.profilePhotoUrl}}
+              style={styles.cameraIcon}
+              resizeMode="cover"
+            />
+          ) : (
+            <Image source={camera} style={styles.cameraIcon} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -587,8 +604,16 @@ const DriverSignupScreen = ({navigation}) => {
                 const image = await ImagePicker.openPicker({
                   width: 1200,
                   height: 800,
-                  cropping: true,
                   mediaType: 'photo',
+                  ...(Platform.OS === 'ios'
+                    ? {
+                        cropping: true,
+                        cropperToolbarTitle: "Crop driver's licence",
+                        cropperStatusBarColor: '#000000',
+                        cropperToolbarColor: '#000000',
+                        cropperToolbarWidgetColor: '#ffffff',
+                      }
+                    : {cropping: false}),
                 });
 
                 if (!image?.path) {
@@ -620,6 +645,15 @@ const DriverSignupScreen = ({navigation}) => {
             </Text>
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
+          {formData.licenseImageUrl ? (
+            <View style={{marginTop: 10}}>
+              <Image
+                source={{uri: formData.licenseImageUrl}}
+                style={{width: '100%', height: 120, borderRadius: 8}}
+                resizeMode="cover"
+              />
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.documentInputGroup}>
@@ -645,8 +679,16 @@ const DriverSignupScreen = ({navigation}) => {
                 const image = await ImagePicker.openPicker({
                   width: 1200,
                   height: 800,
-                  cropping: true,
                   mediaType: 'photo',
+                  ...(Platform.OS === 'ios'
+                    ? {
+                        cropping: true,
+                        cropperToolbarTitle: 'Crop truck photo',
+                        cropperStatusBarColor: '#000000',
+                        cropperToolbarColor: '#000000',
+                        cropperToolbarWidgetColor: '#ffffff',
+                      }
+                    : {cropping: false}),
                 });
 
                 if (!image?.path) {

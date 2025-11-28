@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   Modal,
   Image,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAppContext} from '../../context/AppContext';
 import back from '../../assets/icons/back.png';
 import eye from '../../assets/icons/eye.png';
@@ -218,8 +219,16 @@ const SignUpScreen = ({navigation}) => {
                 const image = await ImagePicker.openPicker({
                   width: 800,
                   height: 800,
-                  cropping: true,
                   mediaType: 'photo',
+                  ...(Platform.OS === 'ios'
+                    ? {
+                        cropping: true,
+                        cropperToolbarTitle: 'Crop logo',
+                        cropperStatusBarColor: '#000000',
+                        cropperToolbarColor: '#000000',
+                        cropperToolbarWidgetColor: '#ffffff',
+                      }
+                    : {cropping: false}),
                 });
 
                 if (!image?.path) {
@@ -253,6 +262,15 @@ const SignUpScreen = ({navigation}) => {
                 : 'Upload here'}
             </Text>
           </TouchableOpacity>
+          {formData.logoUrl ? (
+            <View style={{marginTop: 10, alignItems: 'flex-start'}}>
+              <Image
+                source={{uri: formData.logoUrl}}
+                style={{width: 80, height: 80, borderRadius: 8}}
+                resizeMode="cover"
+              />
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.inputContainer}>

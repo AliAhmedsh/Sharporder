@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   ScrollView,
   Dimensions,
@@ -18,6 +17,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 import MapView from 'react-native-maps';
 import hamburger from '../../assets/icons/hamburger.png';
@@ -747,6 +747,7 @@ const DriverDashboardScreen = ({navigation}) => {
                 icon: trips,
                 onPress: () => {
                   closeSidePanel();
+                  navigation.navigate('TripHistory');
                 },
               },
               {
@@ -755,19 +756,26 @@ const DriverDashboardScreen = ({navigation}) => {
                 icon: wallet,
                 onPress: () => {
                   closeSidePanel();
+                  navigation.navigate('Wallet');
                 },
               },
               {
                 id: 'support',
                 title: 'Support',
                 icon: headset,
-                onPress: closeSidePanel,
+                onPress: () => {
+                  closeSidePanel();
+                  navigation.navigate('DriverSupport');
+                },
               },
               {
                 id: 'about',
                 title: 'About',
                 icon: help,
-                onPress: closeSidePanel,
+                onPress: () => {
+                  closeSidePanel();
+                  navigation.navigate('DriverAbout');
+                },
               },
               {
                 id: 'logout',

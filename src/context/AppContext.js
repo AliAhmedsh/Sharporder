@@ -35,7 +35,7 @@ export const AppProvider = ({ children }) => {
     businessName: '',
     dateOfBirth: '',
     email: '',
-    phone: '+234 08012345678',
+    phone: '',
     password: '',
     confirmPassword: '',
     pickupAddress: '',
@@ -43,7 +43,7 @@ export const AppProvider = ({ children }) => {
     truckType: '',
     loadDescription: '',
     recipientName: '',
-    recipientNumber: '+234 08012345678',
+    recipientNumber: '',
     fareOffer: '10000',
   });
 

@@ -8,6 +8,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
+  Image,
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import {useAppContext} from '../../context/AppContext';
 import {Formik, useFormikContext} from 'formik';
@@ -115,11 +119,14 @@ const DeliveryDetailsScreen = ({
   const navigation = useNavigation();
   const [isReceiving, setIsReceiving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [deliveryQuery, setDeliveryQuery] = useState('');
   const [deliverySuggestions, setDeliverySuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showDeliverySuggestions, setShowDeliverySuggestions] = useState(false);
   const deliverySearchTimeoutRef = useRef(null);
+  const uploadProgressAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const fetchDeliverySuggestions = async query => {
     if (!query || query.trim().length < 3) {
@@ -337,42 +344,128 @@ const DeliveryDetailsScreen = ({
                       onPress={async () => {
                         try {
                           setIsUploadingImage(true);
+                          setUploadProgress(0);
+                          
+                          // Start pulse animation
+                          Animated.loop(
+                            Animated.sequence([
+                              Animated.timing(pulseAnim, {
+                                toValue: 1.1,
+                                duration: 800,
+                                useNativeDriver: true,
+                              }),
+                              Animated.timing(pulseAnim, {
+                                toValue: 1,
+                                duration: 800,
+                                useNativeDriver: true,
+                              }),
+                            ])
+                          ).start();
+                          
                           const image = await ImagePicker.openPicker({
                             width: 800,
                             height: 800,
-                            cropping: true,
                             mediaType: 'photo',
+                            ...(Platform.OS === 'ios'
+                              ? {
+                                  cropping: true,
+                                  cropperToolbarTitle: 'Crop load image',
+                                  cropperStatusBarColor: '#000000',
+                                  cropperToolbarColor: '#000000',
+                                  cropperToolbarWidgetColor: '#ffffff',
+                                }
+                              : {cropping: false}),
                           });
 
                           if (!image?.path) {
                             setIsUploadingImage(false);
+                            pulseAnim.stopAnimation();
+                            pulseAnim.setValue(1);
                             return;
                           }
+
+                          // Simulate progress
+                          const progressInterval = setInterval(() => {
+                            setUploadProgress(prev => {
+                              if (prev >= 90) {
+                                clearInterval(progressInterval);
+                                return prev;
+                              }
+                              return prev + 10;
+                            });
+                          }, 200);
 
                           const downloadUrl = await imageUploadService.uploadImage(
                             image.path,
                             'load-images',
                           );
 
+                          clearInterval(progressInterval);
+                          setUploadProgress(100);
+                          
+                          // Animate progress bar
+                          Animated.timing(uploadProgressAnim, {
+                            toValue: 100,
+                            duration: 300,
+                            useNativeDriver: false,
+                          }).start();
+
                           setFieldValue('loadImageUrl', downloadUrl);
+                          
+                          // Stop pulse
+                          pulseAnim.stopAnimation();
+                          pulseAnim.setValue(1);
                         } catch (error) {
                           console.error('Load image pick/upload error:', error);
+                          pulseAnim.stopAnimation();
+                          pulseAnim.setValue(1);
                         } finally {
-                          setIsUploadingImage(false);
+                          setTimeout(() => {
+                            setIsUploadingImage(false);
+                            setUploadProgress(0);
+                            uploadProgressAnim.setValue(0);
+                          }, 500);
                         }
                       }}>
                       <Text style={styles.inputLabel}>
                         Load image (optional)
                       </Text>
                       <View style={styles.uploadContainer}>
-                        <Text style={styles.uploadText}>
-                          {isUploadingImage
-                            ? 'Uploading...'
-                            : values.loadImageUrl
-                            ? 'Image selected'
-                            : 'Upload here'}
-                        </Text>
-                        <Text style={styles.uploadIcon}>↗</Text>
+                        {isUploadingImage ? (
+                          <Animated.View style={[styles.uploadingContainer, {transform: [{scale: pulseAnim}]}]}>
+                            <ActivityIndicator size="small" color="#8B5A9F" />
+                            <Text style={styles.uploadingText}>
+                              Uploading... {uploadProgress}%
+                            </Text>
+                            <View style={styles.progressBarContainer}>
+                              <Animated.View
+                                style={[
+                                  styles.progressBar,
+                                  {
+                                    width: uploadProgressAnim.interpolate({
+                                      inputRange: [0, 100],
+                                      outputRange: ['0%', '100%'],
+                                    }),
+                                  },
+                                ]}
+                              />
+                            </View>
+                          </Animated.View>
+                        ) : values.loadImageUrl ? (
+                          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <View style={{marginRight: 12}}>
+                              <Text style={styles.uploadText}>Image selected ✓</Text>
+                            </View>
+                            <Image
+                              source={{uri: values.loadImageUrl}}
+                              style={{width: 50, height: 50, borderRadius: 6}}
+                              resizeMode="cover"
+                            />
+                          </View>
+                        ) : (
+                          <Text style={styles.uploadText}>Upload here</Text>
+                        )}
+                        {!isUploadingImage && <Text style={styles.uploadIcon}>↗</Text>}
                       </View>
                     </TouchableOpacity>
 
@@ -548,6 +641,28 @@ const styles = StyleSheet.create({
   uploadIcon: {
     fontSize: 16,
     color: '#007AFF',
+  },
+  uploadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  uploadingText: {
+    fontSize: 14,
+    color: '#8B5A9F',
+    fontWeight: '600',
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#8B5A9F',
+    borderRadius: 2,
   },
   toggleContainer: {
     flexDirection: 'row',

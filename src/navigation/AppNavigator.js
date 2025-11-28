@@ -27,6 +27,19 @@ import {
   DriverLoadBoardScreen,
   DriverOnTheWayScreen,
   DriverDeliveryCompleteScreen,
+  ShipperSupportScreen,
+  ShipperAboutScreen,
+  DriverSupportScreen,
+  DriverAboutScreen,
+  PaymentScreen,
+  WalletScreen,
+  TripHistoryScreen,
+  NotificationsScreen,
+  RatingScreen,
+  AddPaymentMethodScreen,
+  ReportsScreen,
+  ProfileScreen,
+  OTPVerificationScreen,
 } from '../screens';
 
 const Stack = createNativeStackNavigator();
@@ -43,6 +56,7 @@ const AuthStack = () => (
     <Stack.Screen name="Login" component={LoginScreen} />
     <Stack.Screen name="SignUp" component={SignUpScreen} />
     <Stack.Screen name="DriverSignup" component={DriverSignupScreen} />
+    <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
   </Stack.Navigator>
 );
 
@@ -61,6 +75,14 @@ const ShipperStack = () => (
     <Stack.Screen name="DeliveryComplete" component={DeliveryCompleteScreen} />
     <Stack.Screen name="LoadBoard" component={LoadBoardScreen} />
     <Stack.Screen name="MyShipments" component={MyShipmentsScreen} />
+    <Stack.Screen name="Payment" component={PaymentScreen} />
+    <Stack.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} />
+    <Stack.Screen name="Reports" component={ReportsScreen} />
+    <Stack.Screen name="Notifications" component={NotificationsScreen} />
+    <Stack.Screen name="Rating" component={RatingScreen} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="ShipperSupport" component={ShipperSupportScreen} />
+    <Stack.Screen name="ShipperAbout" component={ShipperAboutScreen} />
   </Stack.Navigator>
 );
 
@@ -74,11 +96,15 @@ const DriverStack = () => (
     <Stack.Screen name="DriverDashboard" component={DriverDashboardScreen} />
     <Stack.Screen name="DriverLoadBoard" component={DriverLoadBoardScreen} />
     <Stack.Screen name="DriverOnTheWay" component={DriverOnTheWayScreen} />
-    <Stack.Screen
-      name="DriverDeliveryComplete"
-      component={DriverDeliveryCompleteScreen}
-    />
+    <Stack.Screen name="DriverDeliveryComplete" component={DriverDeliveryCompleteScreen} />
     <Stack.Screen name="TripDetails" component={TripDetailsScreen} />
+    <Stack.Screen name="Wallet" component={WalletScreen} />
+    <Stack.Screen name="TripHistory" component={TripHistoryScreen} />
+    <Stack.Screen name="Notifications" component={NotificationsScreen} />
+    <Stack.Screen name="Rating" component={RatingScreen} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="DriverSupport" component={DriverSupportScreen} />
+    <Stack.Screen name="DriverAbout" component={DriverAboutScreen} />
   </Stack.Navigator>
 );
 

@@ -28,19 +28,9 @@ import {
   serverTimestamp, 
   writeBatch 
 } from '@react-native-firebase/firestore';
+import { firebaseConfig } from '../services/firebase/config';
 
-// Initialize Firebase
-const firebaseConfig = {
-  // Your Firebase config here
-  // apiKey: "YOUR_API_KEY",
-  // authDomain: "YOUR_AUTH_DOMAIN",
-  // projectId: "YOUR_PROJECT_ID",
-  // storageBucket: "YOUR_STORAGE_BUCKET",
-  // messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  // appId: "YOUR_APP_ID"
-};
-
-// Initialize Firebase
+// Initialize Firebase using shared config
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -471,9 +461,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Set up auth state listener (simplified)
+  // Set up auth state listener with proper cleanup
   useEffect(() => {
     let isMounted = true;
+    let timeoutId = null;
     
     const handleAuthStateChange = async (currentUser) => {
       try {
@@ -536,7 +527,9 @@ export const AuthProvider = ({ children }) => {
             // due to eventual consistency. We'll retry once after a short delay and then fall back
             // to AsyncStorage/currentUser without signing the user out.
             console.log('No user data found, retrying fetch...');
-            await new Promise(res => setTimeout(res, 1200));
+            await new Promise(res => {
+              timeoutId = setTimeout(res, 1200);
+            });
             const retryData = await getUserDataFromFirestore(currentUser.uid);
 
             if (!isMounted) return;
@@ -603,6 +596,9 @@ export const AuthProvider = ({ children }) => {
     // Cleanup function
     return () => {
       isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       unsubscribe();
     };
   }, []);

@@ -7,7 +7,6 @@ import {
   Image,
   Keyboard,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 import MapView from 'react-native-maps';
 import hamburger from '../../assets/icons/hamburger.png';
@@ -385,7 +385,10 @@ const DashboardScreen = ({navigation}) => {
                 id: 'payments',
                 title: 'Payments',
                 icon: payments,
-                onPress: closeSidePanel,
+                onPress: () => {
+                  closeSidePanel();
+                  navigation.navigate('Payment');
+                },
               },
               {
                 id: 'shipments',
@@ -409,13 +412,19 @@ const DashboardScreen = ({navigation}) => {
                 id: 'support',
                 title: 'Support',
                 icon: headset,
-                onPress: closeSidePanel,
+                onPress: () => {
+                  closeSidePanel();
+                  navigation.navigate('ShipperSupport');
+                },
               },
               {
                 id: 'about',
                 title: 'About',
                 icon: help,
-                onPress: closeSidePanel,
+                onPress: () => {
+                  closeSidePanel();
+                  navigation.navigate('ShipperAbout');
+                },
               },
               {
                 id: 'logout',
@@ -509,7 +518,7 @@ const styles = StyleSheet.create({
   searchInput: {flex: 1, fontSize: 16, color: '#333333'},
   hamburgerButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 20,
+    top: Platform.OS === 'ios' ? 80 : 40,
     left: 20,
     zIndex: 30000,
     elevation: 20,

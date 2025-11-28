@@ -1,58 +1,84 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
-import { useAppContext } from '../../context/AppContext';
-import { useAuth } from '../../context/AuthContext';
-import { firebaseShipmentsService } from '../../services/firebase';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Image,
+} from 'react-native';
+import {useAuth} from '../../context/AuthContext';
+import {firebaseShipmentsService} from '../../services/firebase';
 import back from '../../assets/icons/back.png';
 
-const MyShipmentsScreen = ({ navigation }) => {
-  const { shipments, addShipment, formData, loading } = useAppContext();
-  const { user } = useAuth();
-  const [localShipments, setLocalShipments] = useState([]);
+const MyShipmentsScreen = ({navigation}) => {
+  const {user} = useAuth();
+  const [shipments, setShipments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load real-time shipments data
+  // Subscribe to real-time shipments for this shipper
   useEffect(() => {
-    if (user) {
-      // Shipments will be updated via real-time subscription from AppContext
-      console.log('Loading shipments for user:', user.uid);
+    if (!user?.uid) {
+      setShipments([]);
+      setLoading(false);
+      return;
     }
-  }, [user]);
 
-  const handleRepeatDelivery = async (shipment) => {
-    if (user) {
-      try {
-        const newShipmentData = {
-          ...shipment,
-          shipperId: user.uid,
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        };
+    setLoading(true);
 
-        await addShipment(newShipmentData);
+    const unsubscribe = firebaseShipmentsService.subscribeToShipments(
+      user.uid,
+      fetchedShipments => {
+        setShipments(fetchedShipments || []);
+        setLoading(false);
+      },
+    );
 
-        Alert.alert(
-          'Delivery Repeated',
-          'A new delivery has been created based on this shipment.',
-          [{ text: 'OK' }]
-        );
-      } catch (error) {
-        console.error('Error repeating delivery:', error);
-        Alert.alert('Error', 'Failed to repeat delivery. Please try again.');
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
       }
+    };
+  }, [user?.uid]);
+
+  const handleRepeatDelivery = async shipment => {
+    if (!user?.uid) {
+      return;
+    }
+
+    try {
+      const newShipmentData = {
+        pickupAddress: shipment.pickupAddress || shipment.address || '',
+        deliveryAddress: shipment.deliveryAddress || shipment.address || '',
+        shipperId: user.uid,
+        truckType: shipment.truckType || 'Truck',
+        loadDescription: shipment.loadDescription || shipment.cargoType || '',
+        fareOffer: shipment.fare || shipment.price || 0,
+      };
+
+      const result = await firebaseShipmentsService.createShipment(newShipmentData);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create shipment');
+      }
+
+      Alert.alert(
+        'Delivery Repeated',
+        'A new delivery has been created based on this shipment.',
+        [{text: 'OK'}],
+      );
+    } catch (error) {
+      console.error('Error repeating delivery:', error);
+      Alert.alert('Error', 'Failed to repeat delivery. Please try again.');
     }
   };
 
   const handleRateDelivery = (shipment) => {
-    Alert.alert(
-      'Rate Delivery',
-      'How would you rate this delivery experience?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: '⭐⭐⭐⭐⭐ 5 Stars', onPress: () => console.log('5 stars') },
-        { text: '⭐⭐⭐⭐ 4 Stars', onPress: () => console.log('4 stars') },
-        { text: '⭐⭐⭐ 3 Stars', onPress: () => console.log('3 stars') },
-      ]
-    );
+    // Navigate to rating screen with shipment/trip ID
+    navigation.navigate('Rating', {
+      tripId: shipment.id || shipment.tripId,
+    });
   };
 
   const getStatusColor = (status) => {
@@ -65,15 +91,47 @@ const MyShipmentsScreen = ({ navigation }) => {
     }
   };
 
-  const ShipmentCard = ({ shipment }) => (
+  const formatPrice = shipment => {
+    const raw =
+      typeof shipment.price === 'number'
+        ? shipment.price
+        : shipment.fare ||
+          parseInt(
+            String(shipment.price || '0')
+              .replace('NGN', '')
+              .replace('₦', '')
+              .replace(/,/g, '') || '0',
+            10,
+          );
+
+    return `₦${(raw || 0).toLocaleString('en-NG')}`;
+  };
+
+  const ShipmentCard = ({shipment}) => (
     <View style={styles.shipmentCard}>
       <View style={styles.shipmentContent}>
         <View style={styles.shipmentInfo}>
-          <Text style={styles.addressText}>{shipment.pickupAddress || shipment.address || 'No address'}</Text>
-          <Text style={styles.dateText}>{shipment.createdAt ? new Date(shipment.createdAt).toLocaleDateString() : shipment.date}</Text>
+          <Text style={styles.addressText}>
+            {shipment.pickupAddress || shipment.address || 'No address'}
+          </Text>
+          <Text style={styles.dateText}>
+            {shipment.createdAt
+              ? new Date(shipment.createdAt).toLocaleString('en-NG', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : shipment.date}
+          </Text>
           <View style={styles.priceContainer}>
-            <Text style={styles.priceText}>₦{shipment.price?.replace('NGN ', '').replace(',', '') || '0'}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(shipment.status) }]}>
+            <Text style={styles.priceText}>{formatPrice(shipment)}</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                {backgroundColor: getStatusColor(shipment.status)},
+              ]}>
               <Text style={styles.statusText}>{shipment.status || 'Unknown'}</Text>
             </View>
           </View>
@@ -103,8 +161,7 @@ const MyShipmentsScreen = ({ navigation }) => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+          onPress={() => navigation.goBack()}>
           <Image style={styles.backButtonImage} source={back} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My shipments</Text>
@@ -115,17 +172,17 @@ const MyShipmentsScreen = ({ navigation }) => {
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading shipments...</Text>
           </View>
+        ) : shipments.length > 0 ? (
+          shipments.map(shipment => (
+            <ShipmentCard key={shipment.id} shipment={shipment} />
+          ))
         ) : (
-          shipments.length > 0 ? (
-            shipments.map((shipment) => (
-              <ShipmentCard key={shipment.id} shipment={shipment} />
-            ))
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No shipments found</Text>
-              <Text style={styles.emptySubtext}>Your deliveries will appear here</Text>
-            </View>
-          )
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No shipments found</Text>
+            <Text style={styles.emptySubtext}>
+              Your deliveries will appear here
+            </Text>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -194,10 +251,53 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 4,
   },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
   priceText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'capitalize',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
   },
   actionButtons: {
     alignItems: 'flex-end',
