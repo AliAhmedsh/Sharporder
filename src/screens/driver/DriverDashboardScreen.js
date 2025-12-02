@@ -33,8 +33,13 @@ import next from '../../assets/icons/next.png';
 import {useAuth} from '../../context/AuthContext';
 import {realTimeService, firebaseLoadsService} from '../../services/firebase';
 import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 
-const DriverStats = () => {
+const DriverStats = ({todayEarnings = 0, todayLoads = 0, rating = 0}) => {
+  const formatCurrency = (amount) => {
+    return `₦${(amount || 0).toLocaleString('en-NG')}`;
+  };
+
   return (
     <View style={styles.statsContainer}>
       <View style={styles.statsHeader}>
@@ -43,7 +48,7 @@ const DriverStats = () => {
           <Text style={styles.statsLink}>Earnings</Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.statsValue}>₦0</Text>
+      <Text style={styles.statsValue}>{formatCurrency(todayEarnings)}</Text>
       <View style={styles.statsDivider} />
 
       <View style={styles.statsHeader}>
@@ -52,7 +57,7 @@ const DriverStats = () => {
           <Text style={styles.statsLink}>Loads</Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.statsValue}>20</Text>
+      <Text style={styles.statsValue}>{todayLoads}</Text>
       <View style={styles.statsDivider} />
 
       <View style={styles.statsHeader}>
@@ -61,56 +66,79 @@ const DriverStats = () => {
           <Text style={styles.statsLink}>Ratings</Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.statsValue}>4.65</Text>
+      <Text style={styles.statsValue}>{rating > 0 ? rating.toFixed(2) : 'N/A'}</Text>
     </View>
   );
 };
 
-const LoadCard = ({load}) => {
+const LoadCard = ({load, onViewDetails}) => {
+  if (!load) return null;
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleString('en-NG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const formatPrice = (amount) => {
+    if (typeof amount === 'number') {
+      return `₦${amount.toLocaleString('en-NG')}`;
+    }
+    return amount || 'N/A';
+  };
+
   return (
     <View style={styles.loadCard}>
       <View style={styles.loadHeader}>
         <View style={styles.loadRoute}>
           <Text style={styles.loadRouteIcon}>✈️</Text>
-          <Text style={styles.loadRouteText}>Lagos → Abuja</Text>
+          <Text style={styles.loadRouteText}>
+            {load.pickupAddress || 'Pickup'} → {load.deliveryAddress || 'Delivery'}
+          </Text>
         </View>
       </View>
 
       <View style={styles.loadDetails}>
         <View style={styles.loadDetailItem}>
           <Text style={styles.loadDetailIcon}>🕒</Text>
-          <Text style={styles.loadDetailText}>20:50am, 01/09/205</Text>
+          <Text style={styles.loadDetailText}>{formatDate(load.createdAt)}</Text>
         </View>
         <View style={styles.loadDetailItem}>
           <Text style={styles.loadDetailIcon}>📦</Text>
-          <Text style={styles.loadDetailText}>134 Kg</Text>
+          <Text style={styles.loadDetailText}>{load.weight || load.loadDescription || 'N/A'}</Text>
         </View>
         <View style={styles.loadDetailItem}>
           <Text style={styles.loadDetailIcon}>🚛</Text>
-          <Text style={styles.loadDetailText}>Truck</Text>
+          <Text style={styles.loadDetailText}>{load.truckType || 'Truck'}</Text>
         </View>
       </View>
 
       <View style={styles.customerInfo}>
         <Image
-          source={{uri: 'https://via.placeholder.com/40'}}
+          source={{uri: load.shipperPhotoUrl || 'https://via.placeholder.com/40'}}
           style={styles.customerAvatar}
         />
         <View style={styles.customerDetails}>
-          <Text style={styles.customerName}>Chukwuebuke Osinachi</Text>
+          <Text style={styles.customerName}>{load.shipperName || 'Shipper'}</Text>
           <View style={styles.customerRating}>
             <Text style={styles.customerStar}>⭐</Text>
-            <Text style={styles.customerRatingText}>4.8</Text>
+            <Text style={styles.customerRatingText}>{load.shipperRating || 'N/A'}</Text>
             <Text style={styles.customerDeliveries}>
-              120 successful deliveries
+              {load.shipperDeliveries || 0} successful deliveries
             </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.loadFooter}>
-        <Text style={styles.loadPrice}>₦120,000 - ₦150,000</Text>
-        <TouchableOpacity style={styles.viewDetailsButton}>
+        <Text style={styles.loadPrice}>{formatPrice(load.fareOffer || load.price)}</Text>
+        <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails}>
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
       </View>
@@ -297,6 +325,16 @@ const DriverDashboardScreen = ({navigation}) => {
   const [availableLoads, setAvailableLoads] = useState([]);
   // Delay clearing to avoid flicker on transient empty snapshots
   const emptyClearTimeoutRef = useRef(null);
+  
+  // Dynamic stats
+  const [driverStats, setDriverStats] = useState({
+    todayEarnings: 0,
+    todayLoads: 0,
+    rating: user?.rating || 0
+  });
+  
+  // Recent loads for offline view
+  const [recentLoads, setRecentLoads] = useState([]);
 
   // Start/stop realtime subscription when going online/offline
   useEffect(() => {
@@ -577,17 +615,70 @@ const DriverDashboardScreen = ({navigation}) => {
     firebaseLoadsService.rejectBid(bidId, loadId, user._user.uid);
   };
 
-  const sampleLoad = {
-    id: 1,
-    route: 'Lagos → Abuja',
-    time: '20:50am, 01/09/205',
-    weight: '134 Kg',
-    vehicle: 'Truck',
-    customer: 'Chukwuebuke Osinachi',
-    rating: 4.8,
-    deliveries: 120,
-    priceRange: '₦120,000 - ₦150,000',
-  };
+  // Load driver stats from Firebase
+  useEffect(() => {
+    const loadDriverStats = async () => {
+      if (!user?.uid) return;
+
+      try {
+        // Fetch today's earnings from Firestore
+        const earningsRef = firestore()
+          .collection('earnings')
+          .where('driverId', '==', user.uid);
+        
+        const snapshot = await earningsRef.get();
+        
+        let todayEarnings = 0;
+        let todayLoads = 0;
+        
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const createdAt = data.createdAt?.toDate?.() || new Date(0);
+          
+          if (createdAt >= todayStart && data.status === 'completed') {
+            todayEarnings += data.amount || 0;
+            todayLoads += 1;
+          }
+        });
+
+        setDriverStats({
+          todayEarnings,
+          todayLoads,
+          rating: user?.rating || 0
+        });
+      } catch (error) {
+        console.error('Error loading driver stats:', error);
+      }
+    };
+
+    loadDriverStats();
+  }, [user?.uid]);
+
+  // Load recent loads for offline view
+  useEffect(() => {
+    const loadRecentLoads = async () => {
+      if (!user?.uid) return;
+
+      try {
+        const result = await firebaseLoadsService.getAvailableLoads({
+          status: 'available'
+        });
+
+        if (result.success && result.data) {
+          setRecentLoads(result.data.slice(0, 5)); // Show top 5 recent loads
+        }
+      } catch (error) {
+        console.error('Error loading recent loads:', error);
+      }
+    };
+
+    if (!isOnline) {
+      loadRecentLoads();
+    }
+  }, [user?.uid, isOnline]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -678,10 +769,29 @@ const DriverDashboardScreen = ({navigation}) => {
           <ScrollView
             contentContainerStyle={{flexGrow: 1, padding: 16}}
             style={styles.sheetContent}>
-            <DriverStats />
+            <DriverStats 
+              todayEarnings={driverStats.todayEarnings}
+              todayLoads={driverStats.todayLoads}
+              rating={driverStats.rating}
+            />
             <View style={styles.availableLoadsSection}>
               <Text style={styles.availableLoadsTitle}>Available Loads</Text>
-              <LoadCard load={sampleLoad} />
+              {recentLoads.length > 0 ? (
+                recentLoads.map(load => (
+                  <LoadCard 
+                    key={load.id} 
+                    load={load}
+                    onViewDetails={() => {
+                      navigation.navigate('DriverLoadBoard');
+                    }}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyLoadsContainer}>
+                  <Text style={styles.emptyLoadsText}>No available loads</Text>
+                  <Text style={styles.emptyLoadsSubtext}>Go online to see available loads</Text>
+                </View>
+              )}
             </View>
           </ScrollView>
         </Animated.View>
@@ -1574,6 +1684,24 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     flex: 1,
+  },
+  emptyLoadsContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  emptyLoadsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  emptyLoadsSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
 });
 
