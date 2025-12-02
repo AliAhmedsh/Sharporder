@@ -129,62 +129,7 @@ export const AppProvider = ({ children }) => {
     setShipments(prevShipments => prevShipments.filter(shipment => shipment.id !== shipmentId));
   };
 
-  useEffect(() => {
-    if (shipments.length === 0) {
-      const sampleShipments = [
-        {
-          id: 1,
-          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
-          date: '10/07/2025 12:58 PM',
-          price: 'NGN 12,500',
-          status: 'Delivered'
-        },
-        {
-          id: 2,
-          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
-          date: '10/07/2025 12:58 PM',
-          price: 'NGN 12,500',
-          status: 'Delivered'
-        },
-        {
-          id: 3,
-          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
-          date: '10/07/2025 12:58 PM',
-          price: 'NGN 12,500',
-          status: 'Delivered'
-        },
-        {
-          id: 4,
-          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
-          date: '10/07/2025 12:58 PM',
-          price: 'NGN 12,500',
-          status: 'Delivered'
-        },
-        {
-          id: 5,
-          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
-          date: '10/07/2025 12:58 PM',
-          price: 'NGN 12,500',
-          status: 'Delivered'
-        },
-        {
-          id: 6,
-          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
-          date: '10/07/2025 12:58 PM',
-          price: 'NGN 12,500',
-          status: 'Delivered'
-        },
-        {
-          id: 7,
-          address: '35 Hakeem Dickson Street, Lekki Phase 1...',
-          date: '10/07/2025 12:58 PM',
-          price: 'NGN 12,500',
-          status: 'Delivered'
-        }
-      ];
-      setShipments(sampleShipments);
-    }
-  }, []);
+  // Removed static sample shipments - all shipments now come from Firebase
 
   const onboardingSteps = [
     {
