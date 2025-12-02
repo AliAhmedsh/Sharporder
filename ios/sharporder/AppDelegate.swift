@@ -7,7 +7,7 @@ import Firebase
 @main
 class AppDelegate: RCTAppDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-    self.moduleName = "weblah"
+    self.moduleName = "sharporder"
     self.dependencyProvider = RCTAppDependencyProvider()
     FirebaseApp.configure()
 

@@ -215,26 +215,6 @@ export const AuthProvider = ({ children }) => {
       const userType = userData.userType || 'shipper';
       console.log('User type determined as:', userType);
 
-      // Enforce email verification ONLY for drivers (case-insensitive)
-      if (
-        typeof userType === 'string' &&
-        userType.toLowerCase() === 'driver' &&
-        !user.emailVerified
-      ) {
-        console.log('Blocking sign in for unverified driver email:', user.email);
-        try {
-          await firebaseSignOut(auth);
-        } catch (signOutError) {
-          console.error('Error signing out unverified driver:', signOutError);
-        }
-
-        return {
-          success: false,
-          error:
-            'Your email is not verified. Please check your inbox and verify your email before logging in.',
-        };
-      }
-
       // Create updated user object with profile data
       const updatedUser = {
         ...user,
@@ -482,24 +462,6 @@ export const AuthProvider = ({ children }) => {
           if (userData) {
             const userType = userData.userType || 'shipper';
             console.log('User data retrieved, type:', userType);
-
-            // If this is a driver with unverified email, treat as signed out
-            if (
-              typeof userType === 'string' &&
-              userType.toLowerCase() === 'driver' &&
-              !currentUser.emailVerified
-            ) {
-              console.log(
-                'Auth state: unverified driver detected, signing out in listener',
-              );
-              try {
-                await firebaseSignOut(auth);
-              } catch (e) {
-                console.error('Error signing out unverified driver in listener:', e);
-              }
-              // Do not set user state; leave them on auth screens
-              return;
-            }
 
             // Create updated user object with profile data
             const updatedUser = {

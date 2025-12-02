@@ -32,6 +32,7 @@ import {
   DriverSupportScreen,
   DriverAboutScreen,
   PaymentScreen,
+  PaystackCheckoutScreen,
   WalletScreen,
   TripHistoryScreen,
   NotificationsScreen,
@@ -76,6 +77,7 @@ const ShipperStack = () => (
     <Stack.Screen name="LoadBoard" component={LoadBoardScreen} />
     <Stack.Screen name="MyShipments" component={MyShipmentsScreen} />
     <Stack.Screen name="Payment" component={PaymentScreen} />
+    <Stack.Screen name="PaystackCheckout" component={PaystackCheckoutScreen} />
     <Stack.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} />
     <Stack.Screen name="Reports" component={ReportsScreen} />
     <Stack.Screen name="Notifications" component={NotificationsScreen} />

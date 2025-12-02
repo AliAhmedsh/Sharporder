@@ -252,14 +252,6 @@ export const AppProvider = ({ children }) => {
     },
   ];
 
-  const drivers = [
-    { id: 1, name: 'Kunle Alamu', rating: 4.5, deliveries: 50, price: 15000, time: '10 mins away' },
-    { id: 2, name: 'Mohammed Babaginda', rating: 4.8, deliveries: 120, price: 12000, time: '10 mins away' },
-    { id: 3, name: 'Chukwuebube Osinachi', rating: 4.8, deliveries: 120, price: 12000, time: '10 mins away' },
-    { id: 4, name: 'Oghenetega Atufe', rating: 4.8, deliveries: 120, price: 12000, time: '10 mins away' },
-    { id: 5, name: 'Oluwatomisin Alamu', rating: 4.5, deliveries: 50, price: 15000, time: '10 mins away' },
-  ];
-
   const value = {
     currentOnboardingStep,
     setCurrentOnboardingStep,
@@ -295,7 +287,6 @@ export const AppProvider = ({ children }) => {
     deleteShipment,
     onboardingSteps,
     truckTypes,
-    drivers,
     showBidsModal,
     setShowBidsModal,
     currentBids,

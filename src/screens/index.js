@@ -21,6 +21,7 @@ export { default as DriverDeliveryCompleteScreen } from './driver/DriverDelivery
 export { default as DriverSupportScreen } from './driver/DriverSupportScreen';
 export { default as DriverAboutScreen } from './driver/DriverAboutScreen';
 export { default as PaymentScreen } from './shipper/PaymentScreen';
+export { default as PaystackCheckoutScreen } from './shipper/PaystackCheckoutScreen';
 export { default as WalletScreen } from './driver/WalletScreen';
 export { default as TripHistoryScreen } from './driver/TripHistoryScreen';
 export { default as NotificationsScreen } from './NotificationsScreen';

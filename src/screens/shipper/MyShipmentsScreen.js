@@ -81,6 +81,16 @@ const MyShipmentsScreen = ({navigation}) => {
     });
   };
 
+  const getShipmentAmount = shipment => {
+    if (typeof shipment.fareOffer === 'number') {
+      return shipment.fareOffer;
+    }
+    if (typeof shipment.price === 'number') {
+      return shipment.price;
+    }
+    return 0;
+  };
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'delivered': return '#4CAF50';
@@ -151,6 +161,28 @@ const MyShipmentsScreen = ({navigation}) => {
           >
             <Text style={styles.rateButtonText}>⭐ Rate</Text>
           </TouchableOpacity>
+
+          {shipment.status === 'pending' && shipment.paymentStatus !== 'paid' && (
+            <TouchableOpacity
+              style={styles.payButton}
+              onPress={() => {
+                const amount = getShipmentAmount(shipment);
+                if (!amount) {
+                  Alert.alert('Payment', 'No amount found for this shipment.');
+                  return;
+                }
+                navigation.navigate('PaystackCheckout', {
+                  shipmentId: shipment.id,
+                  loadId: shipment.loadId || null,
+                  amount,
+                  email: user?.email || '',
+                  description: 'Delivery payment',
+                });
+              }}
+            >
+              <Text style={styles.payButtonText}>💰 Pay now</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -293,7 +325,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
@@ -324,6 +355,17 @@ const styles = StyleSheet.create({
   },
   rateButtonText: {
     color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  payButton: {
+    backgroundColor: '#00BFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  payButtonText: {
+    color: '#FFF',
     fontSize: 12,
     fontWeight: '500',
   },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Modal, Image, TouchableWithoutFeedback, Alert } from 'react-native';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { firebaseLoadsService, firebaseShipmentsService } from '../../services/firebase';
 
 const DriverFoundScreen = ({ navigation, route }) => {
@@ -12,6 +13,8 @@ const DriverFoundScreen = ({ navigation, route }) => {
     alertResolved, 
     setAlertResolved 
   } = useAppContext();
+
+  const { user } = useAuth();
 
   const loadId = route?.params?.loadId;
   const initialLoad = route?.params?.load || null;
@@ -55,7 +58,7 @@ const DriverFoundScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Create a shipment in Firestore
+      // Create a shipment in Firestore (initially pending until payment completes)
       const shipmentData = {
         loadId,
         shipperId: load.shipperId,
@@ -63,7 +66,6 @@ const DriverFoundScreen = ({ navigation, route }) => {
         pickupAddress: load.pickupAddress || '',
         deliveryAddress: load.deliveryAddress || '',
         fareOffer: load.fareOffer || 0,
-        status: 'in_transit',
       };
       const created = await firebaseShipmentsService.createShipment(shipmentData);
       if (!created?.success) {
@@ -72,15 +74,20 @@ const DriverFoundScreen = ({ navigation, route }) => {
 
       const shipmentId = created.data.id;
 
-      // Update the load to in_transit and set shipmentId
-      const upd = await firebaseLoadsService.updateLoad(loadId, { status: 'in_transit', shipmentId });
+      // Attach the shipmentId to the load; status will move to in_transit after payment
+      const upd = await firebaseLoadsService.updateLoad(loadId, { shipmentId });
       if (!upd?.success) {
         throw new Error(upd?.error || 'Failed to update load');
       }
 
-      Alert.alert('Driver accepted', 'Trip has started.');
-      // Optionally navigate back or to a tracking screen; the driver will transition via realtime.
-      navigation.navigate('Dashboard');
+      // Navigate to Paystack checkout so the user can pay for this trip
+      navigation.navigate('PaystackCheckout', {
+        loadId,
+        shipmentId,
+        amount: load.fareOffer || 0,
+        email: user?.email || '',
+        description: 'Delivery payment',
+      });
     } catch (e) {
       console.error('Accept driver error:', e);
       Alert.alert('Error', e.message || 'Could not accept driver. Please try again.');

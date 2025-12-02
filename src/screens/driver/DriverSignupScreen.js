@@ -200,6 +200,17 @@ const DriverSignupScreen = ({navigation}) => {
       errors.licenseNumber = 'License number is required';
     }
 
+    // Validate verification documents
+    if (!formData.profilePhotoUrl) {
+      errors.profilePhotoUrl = 'Profile photo is required for verification';
+    }
+    if (!formData.licenseImageUrl) {
+      errors.licenseImageUrl = "Driver's licence image is required";
+    }
+    if (!formData.truckPhotoUrl) {
+      errors.truckPhotoUrl = 'Truck photo is required';
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -584,6 +595,7 @@ const DriverSignupScreen = ({navigation}) => {
           )}
         </TouchableOpacity>
       </View>
+      {renderInputError('profilePhotoUrl')}
 
       <View style={styles.separatorLine} />
 
@@ -655,6 +667,7 @@ const DriverSignupScreen = ({navigation}) => {
             </View>
           ) : null}
         </View>
+        {renderInputError('licenseImageUrl')}
 
         <View style={styles.documentInputGroup}>
           <Text style={styles.inputLabel}>Licence number</Text>
@@ -721,6 +734,7 @@ const DriverSignupScreen = ({navigation}) => {
             <Image source={upload} style={styles.uploadIcon} />
           </TouchableOpacity>
         </View>
+        {renderInputError('truckPhotoUrl')}
       </View>
 
       <TouchableOpacity
